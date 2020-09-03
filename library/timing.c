@@ -558,4 +558,14 @@ hard_test_done:
 
 #endif /* MBEDTLS_SELF_TEST */
 
+#if defined(MBEDTLS_PEFORMANCE)
+unsigned long hs_runtime;
+unsigned long runtime;
+unsigned long cryptotime;
+unsigned long hash_calls;
+struct mbedtls_timing_hr_time hs_runtimer;
+struct mbedtls_timing_hr_time runtimer;
+struct mbedtls_timing_hr_time cryptotimer;
+#endif // defined(MBEDTLS_PEFORMANCE)
+
 #endif /* MBEDTLS_TIMING_C */

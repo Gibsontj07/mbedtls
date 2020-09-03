@@ -300,6 +300,10 @@ extern "C" {
 #define MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8      0xC0AE  /**< TLS 1.2 */
 #define MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8      0xC0AF  /**< TLS 1.2 */
 
+#define MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA256     0xC0FB
+#define MBEDTLS_TLS_KYBER_ECDSA_WITH_AES_256_GCM_SHA256		  0xC0FC
+#define MBEDTLS_TLS_ECDHE_SPHINCS_WITH_AES_256_GCM_SHA256     0xC0FD
+#define MBEDTLS_TLS_KYBER_SPHINCS_WITH_AES_256_GCM_SHA256     0xC0FE
 #define MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8          0xC0FF  /**< experimental */
 
 /* RFC 7905 */
@@ -327,6 +331,9 @@ typedef enum {
     MBEDTLS_KEY_EXCHANGE_ECDH_RSA,
     MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA,
     MBEDTLS_KEY_EXCHANGE_ECJPAKE,
+	MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS,
+	MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA,
+	MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS,
 } mbedtls_key_exchange_type_t;
 
 /* Key exchanges using a certificate */
@@ -336,7 +343,10 @@ typedef enum {
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)   || \
     defined(MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED)       || \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED)      || \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)    || \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)   || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
 #define MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED
 #endif
 
@@ -346,14 +356,19 @@ typedef enum {
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED)      ||       \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED)     ||       \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)    ||       \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)   ||		 \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)   || \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
 #define MBEDTLS_KEY_EXCHANGE__CERT_REQ_ALLOWED__ENABLED
 #endif
 
 /* Key exchanges involving server signature in ServerKeyExchange */
 #if defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED)       || \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED)     || \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)	|| \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)   || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
 #define MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED
 #endif
 
@@ -377,7 +392,10 @@ typedef enum {
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED)     || \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)     || \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)   || \
-    defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)		|| \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)   || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
 #define MBEDTLS_KEY_EXCHANGE__SOME_PFS__ENABLED
 #endif
 
@@ -398,8 +416,15 @@ typedef enum {
 /* Key exchanges using ECDHE */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED)     || \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)   || \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)		|| \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
 #define MBEDTLS_KEY_EXCHANGE__SOME__ECDHE_ENABLED
+#endif
+
+/* Key exchanges using KYBER */
+#if	defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)   || \
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+#define MBEDTLS_KEY_EXCHANGE__SOME__KYBER_ENABLED
 #endif
 
 typedef struct mbedtls_ssl_ciphersuite_t mbedtls_ssl_ciphersuite_t;
@@ -453,6 +478,9 @@ static inline int mbedtls_ssl_ciphersuite_has_pfs( const mbedtls_ssl_ciphersuite
         case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
         case MBEDTLS_KEY_EXCHANGE_ECJPAKE:
+		case MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS:
+		case MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA:
+		case MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS:
             return( 1 );
 
         default:
@@ -504,7 +532,9 @@ static inline int mbedtls_ssl_ciphersuite_cert_req_allowed( const mbedtls_ssl_ci
         case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
-            return( 1 );
+		case MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA:
+        case MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS:
+			return( 1 );
 
         default:
             return( 0 );
@@ -534,13 +564,29 @@ static inline int mbedtls_ssl_ciphersuite_uses_ecdhe( const mbedtls_ssl_ciphersu
         case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_PSK:
-            return( 1 );
+        case MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS:
+			return( 1 );
 
         default:
             return( 0 );
     }
 }
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__ECDHE_ENABLED) */
+
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__KYBER_ENABLED)
+static inline int mbedtls_ssl_ciphersuite_uses_kyber(const mbedtls_ssl_ciphersuite_t *info)
+{
+	switch (info->key_exchange)
+	{
+	case MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS:
+	case MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA:
+		return(1);
+
+	default:
+		return(0);
+	}
+}
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__KYBER_ENABLED) */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED)
 static inline int mbedtls_ssl_ciphersuite_uses_server_signature( const mbedtls_ssl_ciphersuite_t *info )
@@ -550,7 +596,10 @@ static inline int mbedtls_ssl_ciphersuite_uses_server_signature( const mbedtls_s
         case MBEDTLS_KEY_EXCHANGE_DHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_RSA:
         case MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA:
-            return( 1 );
+        case MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS:
+		case MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS:
+		case MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA:
+			return( 1 );
 
         default:
             return( 0 );

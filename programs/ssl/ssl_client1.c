@@ -66,8 +66,7 @@
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_ENTROPY_C) ||  \
     !defined(MBEDTLS_SSL_TLS_C) || !defined(MBEDTLS_SSL_CLI_C) || \
-    !defined(MBEDTLS_NET_C) || !defined(MBEDTLS_RSA_C) ||         \
-    !defined(MBEDTLS_CERTS_C) || !defined(MBEDTLS_PEM_PARSE_C) || \
+    !defined(MBEDTLS_NET_C) ||  !defined(MBEDTLS_PEM_PARSE_C) || \
     !defined(MBEDTLS_CTR_DRBG_C) || !defined(MBEDTLS_X509_CRT_PARSE_C)
 int main( void )
 {
@@ -87,6 +86,7 @@ int main( void )
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/error.h"
 #include "mbedtls/certs.h"
+#include "mbedtls/timing.h"
 
 #include <string.h>
 
@@ -135,6 +135,11 @@ int main( void )
     mbedtls_x509_crt_init( &cacert );
     mbedtls_ctr_drbg_init( &ctr_drbg );
 
+#if defined(MBEDTLS_PEFORMANCE)
+    mbedtls_pq_performance performance;
+    ssl.performance = &performance;
+#endif
+
     mbedtls_printf( "\n  . Seeding the random number generator..." );
     fflush( stdout );
 
@@ -155,9 +160,9 @@ int main( void )
     mbedtls_printf( "  . Loading the CA root certificate ..." );
     fflush( stdout );
 
-    ret = mbedtls_x509_crt_parse( &cacert, (const unsigned char *) mbedtls_test_cas_pem,
-                          mbedtls_test_cas_pem_len );
-    if( ret < 0 )
+    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *)mbedtls_test_ca_crt,
+		mbedtls_test_ca_crt_len);
+	if( ret < 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned -0x%x\n\n", -ret );
         goto exit;
@@ -223,7 +228,9 @@ int main( void )
      */
     mbedtls_printf( "  . Performing the SSL/TLS handshake..." );
     fflush( stdout );
-
+    
+    HS_RUNTIME_INIT
+    HS_RUNTIME_START
     while( ( ret = mbedtls_ssl_handshake( &ssl ) ) != 0 )
     {
         if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE )
@@ -232,8 +239,29 @@ int main( void )
             goto exit;
         }
     }
+    HS_RUNTIME_STOP
+    performance.handshake = hs_runtime;
 
     mbedtls_printf( " ok\n" );
+
+#if defined(MBEDTLS_PEFORMANCE)
+	mbedtls_printf("%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i\n",
+	performance.handshake,
+	performance.sphincs_verify,
+	performance.kyber_enc,
+	performance.write_client_hello,
+	performance.parse_server_hello,
+	performance.parse_server_certificate,
+	performance.parse_server_key_exchange,
+	performance.parse_server_hello_done,
+	performance.write_client_key_exchange,
+	performance.write_client_change_cipher,
+	performance.write_client_finish,
+	performance.parse_server_change_cipher,
+	performance.parse_server_finish,
+	performance.hashs
+	);
+#endif
 
     /*
      * 5. Verify the server certificate

@@ -84,7 +84,14 @@ OBJS_CRYPTO=	aes.o		aesni.o		arc4.o		\
 		ripemd160.o	rsa_internal.o	rsa.o  		\
 		sha1.o		sha256.o	sha512.o	\
 		threading.o	timing.o	version.o	\
-		version_features.o		xtea.o
+		version_features.o		xtea.o 	\
+		fips202.o 	kyber_cbd.o	kyber_indcpa.o	\
+		kyber_kem.o	kyber_ntt.o	kyber_poly.o	\
+		kyber_polyvec.o	kyber_precomp.o	\
+		kyber_reduce.o	kyber_verify.o	\
+		spx.o	spx_fors.o	spx_hash_address.o	\
+		spx_hash_sha256.o	spx_hash_shake256.o	\
+		spx_utils.o	spx_wots.o
 
 OBJS_X509=	certs.o		pkcs11.o	x509.o		\
 		x509_create.o	x509_crl.o	x509_crt.o	\

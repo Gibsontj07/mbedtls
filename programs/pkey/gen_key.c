@@ -75,6 +75,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(MBEDTLS_SPHINCS_C)
+#include "pq/spx.h"
+#endif // defined(MBEDTLS_SPINCS_C)
+
+
 #if !defined(_WIN32)
 #include <unistd.h>
 
@@ -171,7 +176,8 @@ struct options
     int type;                   /* the type of key to generate          */
     int rsa_keysize;            /* length of key in bits                */
     int ec_curve;               /* curve identifier for EC keys         */
-    const char *filename;       /* filename of the key file             */
+    mbedtls_md_type_t md_alg;   /* hash function for PQ signature		*/
+	const char *filename;       /* filename of the key file             */
     int format;                 /* the output format to use             */
     int use_dev_random;         /* use /dev/random as entropy source    */
 } opt;
@@ -260,7 +266,8 @@ int main( int argc, char *argv[] )
     opt.type                = DFL_TYPE;
     opt.rsa_keysize         = DFL_RSA_KEYSIZE;
     opt.ec_curve            = DFL_EC_CURVE;
-    opt.filename            = DFL_FILENAME;
+    opt.md_alg				= MBEDTLS_MD_SHA256;
+	opt.filename            = DFL_FILENAME;
     opt.format              = DFL_FORMAT;
     opt.use_dev_random      = DFL_USE_DEV_RANDOM;
 
@@ -277,7 +284,9 @@ int main( int argc, char *argv[] )
                 opt.type = MBEDTLS_PK_RSA;
             else if( strcmp( q, "ec" ) == 0 )
                 opt.type = MBEDTLS_PK_ECKEY;
-            else
+            else if (strcmp(q, "pq") == 0)
+				opt.type = MBEDTLS_PK_SPHINCS;
+			else
                 goto usage;
         }
         else if( strcmp( p, "format" ) == 0 )
@@ -303,6 +312,23 @@ int main( int argc, char *argv[] )
                 goto usage;
             opt.ec_curve = curve_info->grp_id;
         }
+#endif
+#if defined(MBEDTLS_SPHINCS_C)
+		else if (strcmp(p, "md") == 0)
+		{
+			if (strcmp(q, "SHAKE256") == 0)
+			{
+				opt.md_alg = MBEDTLS_MD_SHAKE256;
+			}
+			else if (strcmp(q, "SHA256") == 0)
+			{
+				opt.md_alg = MBEDTLS_MD_SHA256;
+			}
+			else
+			{
+				goto usage;
+			}
+		}
 #endif
         else if( strcmp( p, "filename" ) == 0 )
             opt.filename = q;
@@ -384,7 +410,20 @@ int main( int argc, char *argv[] )
     }
     else
 #endif /* MBEDTLS_ECP_C */
-    {
+#if defined(MBEDTLS_SPHINCS_C)
+	if (opt.type == MBEDTLS_PK_SPHINCS)
+	{
+		ret = mbedtls_sphincs_genkey(opt.md_alg, mbedtls_pk_sphincs(key),
+									 mbedtls_ctr_drbg_random, &ctr_drbg);
+		if (ret != 0)
+		{
+			mbedtls_printf(" failed\n  !  mbedtls_sphincs_genkey returned -0x%04x", -ret);
+			goto exit;
+		}
+	}
+	else
+#endif /* MBEDTLS_SPHINCS_C */
+	{
         mbedtls_printf( " failed\n  !  key type not supported\n" );
         goto exit;
     }
@@ -429,7 +468,19 @@ int main( int argc, char *argv[] )
     }
     else
 #endif
-        mbedtls_printf("  ! key type not supported\n");
+#if defined(MBEDTLS_SPHINCS_C)
+	if (mbedtls_pk_get_type(&key) == MBEDTLS_PK_SPHINCS)
+	{
+		mbedtls_sphincs_context *sphincs = mbedtls_pk_sphincs(key);
+		
+		mbedtls_mpi_write_file("Root:    ", &sphincs->key.root, 16, NULL);
+		mbedtls_mpi_write_file("PK_Seed: ", &sphincs->key.pk_seed, 16, NULL);
+		mbedtls_mpi_write_file("SK_Seed: ", &sphincs->key.sk_seed, 16, NULL);
+		mbedtls_mpi_write_file("SK_PRF:  ", &sphincs->key.sk_prf, 16, NULL);
+	}
+	else
+#endif /* MBEDTLS_SPHINCS_C */
+		mbedtls_printf("  ! key type not supported\n");
 
     /*
      * 1.3 Export key

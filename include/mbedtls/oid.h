@@ -317,6 +317,11 @@
 #define MBEDTLS_OID_PKCS12_PBE_SHA1_RC2_40_CBC      MBEDTLS_OID_PKCS12_PBE "\x06" /**< pbeWithSHAAnd40BitRC2-CBC OBJECT IDENTIFIER ::= {pkcs-12PbeIds 6} */
 
 /*
+ * SPHINCS algorithm
+ */
+#define MBEDTLS_OID_SPHINCS_ALG					MBEDTLS_OID_ANSI_X9_62 "\xff\01"
+
+/* 
  * EC key algorithms from RFC 5480
  */
 
@@ -421,6 +426,8 @@
  *   ecdsa-with-SHA2(3) 4 } */
 #define MBEDTLS_OID_ECDSA_SHA512            MBEDTLS_OID_ANSI_X9_62_SIG_SHA2 "\x04"
 
+#define MBEDTLS_OID_SPHINCS_SHAKE256		MBEDTLS_OID_ANSI_X9_62_SIG_SHA2 "\xfe"
+#define MBEDTLS_OID_SPHINCS_SHA256			MBEDTLS_OID_ANSI_X9_62_SIG_SHA2 "\xff"
 #ifdef __cplusplus
 extern "C" {
 #endif

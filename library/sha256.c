@@ -74,6 +74,9 @@
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
+#include "mbedtls/timing.h"
+HASH_INIT
+
 #define SHA256_VALIDATE_RET(cond)                           \
     MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_SHA256_BAD_INPUT_DATA )
 #define SHA256_VALIDATE(cond)  MBEDTLS_INTERNAL_VALIDATE( cond )
@@ -439,6 +442,7 @@ int mbedtls_sha256_ret( const unsigned char *input,
                         unsigned char output[32],
                         int is224 )
 {
+    HASH_ADD
     int ret;
     mbedtls_sha256_context ctx;
 

@@ -105,6 +105,8 @@ int main( void )
 #include "mbedtls/dhm.h"
 #include "mbedtls/ecdsa.h"
 #include "mbedtls/ecdh.h"
+#include "pq/kyber.h"
+#include "pq/spx.h"
 
 #include "mbedtls/error.h"
 
@@ -124,7 +126,11 @@ int main( void )
  */
 #define HEAP_SIZE       (1u << 16)  // 64k
 
+#if defined(MBEDTLS_SPHINCS_C)
+#define BUFSIZE         100000
+#else
 #define BUFSIZE         1024
+#endif
 #define HEADER_FORMAT   "  %-24s :  "
 #define TITLE_LEN       25
 
@@ -291,14 +297,14 @@ typedef struct {
          aria, camellia, blowfish, chacha20,
          poly1305,
          havege, ctr_drbg, hmac_drbg,
-         rsa, dhm, ecdsa, ecdh;
+         rsa, dhm, ecdsa, ecdh, kyber, sphincs;
 } todo_list;
 
 
 int main( int argc, char *argv[] )
 {
     int i;
-    unsigned char tmp[200];
+    unsigned char tmp[BUFSIZE];
     char title[TITLE_LEN];
     todo_list todo;
 #if defined(MBEDTLS_MEMORY_BUFFER_ALLOC_C)
@@ -371,6 +377,10 @@ int main( int argc, char *argv[] )
                 todo.ecdsa = 1;
             else if( strcmp( argv[i], "ecdh" ) == 0 )
                 todo.ecdh = 1;
+			else if (strcmp(argv[i], "kyber") == 0)
+				todo.kyber = 1;
+			else if (strcmp(argv[i], "sphincs") == 0)
+				todo.sphincs = 1;
             else
             {
                 mbedtls_printf( "Unrecognized option: %s\n", argv[i] );
@@ -1024,6 +1034,75 @@ int main( int argc, char *argv[] )
         }
     }
 #endif
+#if defined(MBEDTLS_KYBER_C)
+	if (todo.kyber)
+	{
+		mbedtls_kyber_context kyber;
+		size_t olen;
+
+		mbedtls_kyber_init(&kyber);
+
+		if (mbedtls_kyber_genkey(&kyber, myrand, NULL) != 0 )
+		{
+			mbedtls_exit(1);
+		}
+
+		mbedtls_snprintf(title, sizeof(title), "KYBER");
+
+		TIME_PUBLIC(title, "handshake",
+			ret |= mbedtls_kyber_make_public(&kyber, &olen, buf, sizeof(buf),
+				myrand, NULL);
+		ret |= mbedtls_kyber_calc_secret(&kyber, &olen, buf, sizeof(buf),
+			myrand, NULL));
+
+		mbedtls_kyber_free(&kyber);
+	}
+#endif /* MBEDTLS_KYBER_C */
+#if defined(MBEDTLS_SPHINCS_C)
+	if (todo.sphincs)
+	{
+		mbedtls_sphincs_context sphincs;
+		size_t sig_len;
+
+
+		/* SHAKE256 */
+		mbedtls_sphincs_init(&sphincs);
+
+		if (mbedtls_sphincs_genkey(MBEDTLS_MD_SHAKE256, &sphincs, myrand, NULL) != 0)
+		{
+			mbedtls_exit(1);
+		}
+
+		mbedtls_snprintf(title, sizeof(title), "SPHINCS-SHAKE256");
+
+		TIME_PUBLIC(title, "sign",
+			ret = mbedtls_sphincs_write_signature(&sphincs, buf, 32, tmp, &sig_len, myrand, NULL));
+
+		TIME_PUBLIC(title, "verify",
+			ret = mbedtls_sphincs_read_signature(&sphincs, buf, 32, tmp, sig_len));
+
+		mbedtls_sphincs_free(&sphincs);
+
+
+		/* SHA-256 */
+		mbedtls_sphincs_init(&sphincs);
+
+		if (mbedtls_sphincs_genkey(MBEDTLS_MD_SHA256, &sphincs, myrand, NULL) != 0)
+		{
+			mbedtls_exit(1);
+		}
+
+		mbedtls_snprintf(title, sizeof(title), "SPHINCS-SHA-256");
+
+		TIME_PUBLIC(title, "sign",
+			ret = mbedtls_sphincs_write_signature(&sphincs, buf, 32, tmp, &sig_len, myrand, NULL));
+
+		TIME_PUBLIC(title, "verify",
+			ret = mbedtls_sphincs_read_signature(&sphincs, buf, 32, tmp, sig_len));
+
+		mbedtls_sphincs_free(&sphincs);
+	}
+#endif /* MBEDTLS_SPHINCS_C */
 
     mbedtls_printf( "\n" );
 

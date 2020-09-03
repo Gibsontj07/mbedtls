@@ -608,4 +608,21 @@ const mbedtls_md_info_t mbedtls_sha512_info = {
 
 #endif /* MBEDTLS_SHA512_C */
 
+#if defined(MBEDTLS_SHAKE256_C)
+const mbedtls_md_info_t mbedtls_shake256_info = {
+    MBEDTLS_MD_SHAKE256,
+    "SHAKE256",
+    32,
+    64,
+    sha256_starts_wrap,
+    sha224_update_wrap,
+    sha224_finish_wrap,
+    sha256_wrap,
+    sha224_ctx_alloc,
+    sha224_ctx_free,
+    sha224_clone_wrap,
+    sha224_process_wrap,
+};
+#endif
+
 #endif /* MBEDTLS_MD_C */

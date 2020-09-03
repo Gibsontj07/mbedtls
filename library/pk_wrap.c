@@ -491,6 +491,83 @@ const mbedtls_pk_info_t mbedtls_eckeydh_info = {
 };
 #endif /* MBEDTLS_ECP_C */
 
+#if defined(MBEDTLS_KYBER_C)
+static size_t kyber_get_bitlen(const void *ctx)
+{
+	return(((mbedtls_kyber_context *)ctx)->key.bitlen);
+}
+
+static int kyber_check_pair(const void *pub, const void *prv)
+{
+	return(mbedtls_kyber_check_pub_priv(
+		(const mbedtls_kyber_context *)pub,
+		(const mbedtls_kyber_context *)prv));
+}
+
+static void *kyber_alloc_wrap(void)
+{
+	void *ctx = mbedtls_calloc(1, sizeof(mbedtls_kyber_context));
+
+	if (ctx != NULL)
+		mbedtls_kyber_init(ctx);
+
+	return(ctx);
+}
+
+static void kyber_free_wrap(void *ctx)
+{
+	mbedtls_kyber_free((mbedtls_kyber_context *)ctx);
+	mbedtls_free(ctx);
+}
+
+static void kyber_debug(const void *ctx, mbedtls_pk_debug_item *items)
+{
+	items->type = MBEDTLS_PK_DEBUG_MPI;
+	items->name = "pk.Polynomial";
+	items->value = &(((mbedtls_kyber_context *)ctx)->key.sk_poly);
+
+	items++;
+
+	items->type = MBEDTLS_PK_DEBUG_NONE;
+	items->name = "pk.Hash";
+	items->value = &(((mbedtls_kyber_context *)ctx)->key.pk_hash);
+
+	items++;
+
+	items->type = MBEDTLS_PK_DEBUG_NONE;
+	items->name = "pk.Seed";
+	items->value = &(((mbedtls_kyber_context *)ctx)->key.pk_seed);
+}
+
+static int kyber_can_do(mbedtls_pk_type_t type)
+{
+	return(type == MBEDTLS_PK_KYBER);
+}
+
+const mbedtls_pk_info_t mbedtls_kyber_info = {
+	MBEDTLS_PK_KYBER,
+	"KYBER",
+	kyber_get_bitlen,        
+	kyber_can_do,
+	NULL,
+	NULL,
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    NULL,
+    NULL,
+#endif
+	NULL,
+	NULL,
+	kyber_check_pair,
+	kyber_alloc_wrap,       
+	kyber_free_wrap, 
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    NULL,
+    NULL,
+#endif       
+	kyber_debug,            
+};
+#endif /* MBEDTLS_KYBER_C */
+
 #if defined(MBEDTLS_ECDSA_C)
 static int ecdsa_can_do( mbedtls_pk_type_t type )
 {
@@ -613,7 +690,98 @@ const mbedtls_pk_info_t mbedtls_ecdsa_info = {
     eckey_debug,        /* Compatible key structures */
 };
 #endif /* MBEDTLS_ECDSA_C */
+#if defined(MBEDTLS_SPHINCS_C)
+static size_t sphincs_get_bitlen(const void *ctx)
+{
+	return(((mbedtls_sphincs_context *)ctx)->key.bitlen);
+}
 
+static int sphincs_can_do(mbedtls_pk_type_t type)
+{
+	return(type == MBEDTLS_PK_SPHINCS);
+}
+
+
+static int sphincs_verify_wrap(void *ctx, mbedtls_md_type_t md_alg,
+	const unsigned char *hash, size_t hash_len,
+	const unsigned char *sig, size_t sig_len)
+{
+	((void)md_alg);
+
+	return mbedtls_sphincs_read_signature((mbedtls_sphincs_context *)ctx,
+		hash, hash_len, sig, sig_len);
+}
+
+static int sphincs_sign_wrap(void *ctx, mbedtls_md_type_t md_alg,
+	const unsigned char *hash, size_t hash_len,
+	unsigned char *sig, size_t *sig_len,
+	int(*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+	((void)md_alg);
+
+	return(mbedtls_sphincs_write_signature((mbedtls_sphincs_context *)ctx,
+		hash, hash_len, sig, sig_len, f_rng, p_rng));
+}
+
+static int sphincs_check_pair(const void *pub, const void *prv)
+{
+	return(mbedtls_sphincs_check_pub_priv(
+		(const mbedtls_sphincs_context *)pub,
+		(const mbedtls_sphincs_context *)prv));
+}
+
+static void *sphincs_alloc_wrap(void)
+{
+	void *ctx = mbedtls_calloc(1, sizeof(mbedtls_sphincs_context));
+
+	if (ctx != NULL)
+		mbedtls_sphincs_init((mbedtls_sphincs_context *)ctx);
+
+	return(ctx);
+}
+
+static void sphincs_free_wrap(void *ctx)
+{
+	mbedtls_sphincs_free((mbedtls_sphincs_context *)ctx);
+	mbedtls_free(ctx);
+}
+
+static void sphincs_debug(const void *ctx, mbedtls_pk_debug_item *items)
+{
+	items->type = MBEDTLS_PK_DEBUG_MPI;
+	items->name = "root";
+	items->value = &(((mbedtls_sphincs_context *)ctx)->key.root);
+
+	items++;
+
+	items->type = MBEDTLS_PK_DEBUG_MPI;
+	items->name = "pk_seed";
+	items->value = &(((mbedtls_sphincs_context *)ctx)->key.pk_seed);
+}
+
+const mbedtls_pk_info_t mbedtls_sphincs_info = {
+	MBEDTLS_PK_SPHINCS,
+	"SPHINCS+",
+	sphincs_get_bitlen,    
+	sphincs_can_do,
+	sphincs_verify_wrap,
+	sphincs_sign_wrap,
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    NULL,
+    NULL,
+#endif
+	NULL,
+	NULL,
+	sphincs_check_pair,  
+	sphincs_alloc_wrap,
+	sphincs_free_wrap,
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    NULL,
+    NULL,
+#endif
+	sphincs_debug,
+};
+#endif /* MBEDTLS_SPHINCS_C */
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 /*
  * Support for alternative RSA-private implementations

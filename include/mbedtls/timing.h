@@ -171,6 +171,46 @@ int mbedtls_timing_get_delay( void *data );
 int mbedtls_timing_self_test( int verbose );
 #endif
 
+#if defined(MBEDTLS_PEFORMANCE)
+#define HS_RUNTIME_START hs_runtime = 0; (void)mbedtls_timing_get_timer(&hs_runtimer, 1);
+#define HS_RUNTIME_STOP hs_runtime += mbedtls_timing_get_timer(&hs_runtimer, 0);
+#define HS_RUNTIME_INIT extern unsigned long hs_runtime; extern struct mbedtls_timing_hr_time hs_runtimer;
+
+#define RUNTIME_START runtime = 0; (void)mbedtls_timing_get_timer(&runtimer, 1);
+#define RUNTIME_STOP runtime += mbedtls_timing_get_timer(&runtimer, 0);
+#define RUNTIME_INIT extern unsigned long runtime; extern struct mbedtls_timing_hr_time runtimer;
+
+#define NETTIME_START runtime += mbedtls_timing_get_timer(&runtimer, 0);
+#define NETTIME_STOP (void)mbedtls_timing_get_timer(&runtimer, 1);
+
+#define CRYPTOTIME_START cryptotime = 0; (void)mbedtls_timing_get_timer(&cryptotimer, 1);
+#define CRYPTOTIME_STOP cryptotime += mbedtls_timing_get_timer(&cryptotimer, 0);
+#define CRYPTOTIME_INIT extern unsigned long cryptotime; extern struct mbedtls_timing_hr_time cryptotimer;
+
+#define HASH_START hash_calls = 0;
+#define HASH_INIT extern unsigned long hash_calls;
+#define HASH_ADD hash_calls++;
+#else
+#define HS_RUNTIME_START
+#define HS_RUNTIME_STOP
+#define HS_RUNTIME_INIT
+
+#define RUNTIME_START 
+#define RUNTIME_STOP 
+#define RUNTIME_INIT 
+
+#define NETTIME_START 
+#define NETTIME_STOP 
+
+#define CRYPTOTIME_START 
+#define CRYPTOTIME_STOP 
+#define CRYPTOTIME_INIT 
+
+#define HASH_START 
+#define HASH_INIT 
+#define HASH_ADD
+#endif
+
 #ifdef __cplusplus
 }
 #endif

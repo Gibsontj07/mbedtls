@@ -320,6 +320,9 @@ struct mbedtls_ssl_sig_hash_set_t
      * to hash algorithms. */
     mbedtls_md_type_t rsa;
     mbedtls_md_type_t ecdsa;
+#if defined(MBEDTLS_SSL_SPHINCS)
+	mbedtls_md_type_t sphincs;
+#endif /* MBEDTLS_SSL_SPHINCS */
 };
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 &&
           MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
@@ -342,6 +345,9 @@ struct mbedtls_ssl_handshake_params
 #endif
 #if defined(MBEDTLS_ECDH_C)
     mbedtls_ecdh_context ecdh_ctx;              /*!<  ECDH key exchange       */
+#endif
+#if defined(MBEDTLS_KYBER_C)
+	mbedtls_kyber_context kyber_ctx;              /*!<  KYBER key exchange       */
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     mbedtls_ecjpake_context ecjpake_ctx;        /*!< EC J-PAKE key exchange */
@@ -367,6 +373,13 @@ struct mbedtls_ssl_handshake_params
     mbedtls_x509_crl *sni_ca_crl;       /*!< trusted CAs CRLs from SNI      */
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
+
+#if defined(MBEDTLS_SSL_HS_FRAGMENTATION)
+	unsigned char *hs_msg;              /*!<  Reassembled handshake message  */
+
+	size_t hs_msglen;                /*!<  Reassembled handshake message length */
+#endif /* MBEDTLS_SSL_SPHINCS */
+
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
     int ecrs_enabled;                   /*!< Handshake supports EC restart? */
     mbedtls_x509_crt_restart_ctx ecrs_ctx;  /*!< restart context            */

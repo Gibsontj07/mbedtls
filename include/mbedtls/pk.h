@@ -70,6 +70,14 @@
 #include "ecdsa.h"
 #endif
 
+#if defined(MBEDTLS_SPHINCS_C)
+#include "pq/spx.h"
+#endif
+
+#if defined(MBEDTLS_KYBER_C)
+#include "pq/kyber.h"
+#endif
+
 #if ( defined(__ARMCC_VERSION) || defined(_MSC_VER) ) && \
     !defined(inline) && !defined(__cplusplus)
 #define inline __inline
@@ -106,7 +114,9 @@ typedef enum {
     MBEDTLS_PK_ECKEY,
     MBEDTLS_PK_ECKEY_DH,
     MBEDTLS_PK_ECDSA,
-    MBEDTLS_PK_RSA_ALT,
+    MBEDTLS_PK_SPHINCS,
+	MBEDTLS_PK_KYBER,
+	MBEDTLS_PK_RSA_ALT,
     MBEDTLS_PK_RSASSA_PSS,
 } mbedtls_pk_type_t;
 
@@ -197,7 +207,18 @@ static inline mbedtls_ecp_keypair *mbedtls_pk_ec( const mbedtls_pk_context pk )
     return( (mbedtls_ecp_keypair *) (pk).pk_ctx );
 }
 #endif /* MBEDTLS_ECP_C */
-
+#if defined(MBEDTLS_SPHINCS_C)
+/**
+* Quick access to an SPHINCS context inside a PK context.
+*
+* \warning You must make sure the PK context actually holds an EC context
+* before using this function!
+*/
+static inline mbedtls_sphincs_context *mbedtls_pk_sphincs(const mbedtls_pk_context pk)
+{
+	return((mbedtls_sphincs_context *)(pk).pk_ctx);
+}
+#endif /* MBEDTLS_SPHINCS_C */
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 /**
  * \brief           Types for RSA-alt abstraction

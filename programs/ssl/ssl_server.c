@@ -64,10 +64,12 @@
 #define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
 
-#if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_CERTS_C) ||    \
+#include "mbedtls\timing.h"
+
+#if !defined(MBEDTLS_BIGNUM_C) ||    \
     !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_SSL_TLS_C) || \
     !defined(MBEDTLS_SSL_SRV_C) || !defined(MBEDTLS_NET_C) ||     \
-    !defined(MBEDTLS_RSA_C) || !defined(MBEDTLS_CTR_DRBG_C) ||    \
+    !defined(MBEDTLS_CTR_DRBG_C) ||    \
     !defined(MBEDTLS_X509_CRT_PARSE_C) || !defined(MBEDTLS_FS_IO) || \
     !defined(MBEDTLS_PEM_PARSE_C)
 int main( void )
@@ -140,6 +142,10 @@ int main( void )
     mbedtls_net_init( &client_fd );
     mbedtls_ssl_init( &ssl );
     mbedtls_ssl_config_init( &conf );
+#if defined(MBEDTLS_PEFORMANCE)
+    mbedtls_pq_performance performance;
+	ssl.performance = &performance;
+#endif
 #if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_init( &cache );
 #endif
@@ -171,8 +177,8 @@ int main( void )
         goto exit;
     }
 
-    ret = mbedtls_x509_crt_parse( &srvcert, (const unsigned char *) mbedtls_test_cas_pem,
-                          mbedtls_test_cas_pem_len );
+    ret = mbedtls_x509_crt_parse( &srvcert, (const unsigned char *)mbedtls_test_ca_crt,
+                        mbedtls_test_ca_crt_len);
     if( ret != 0 )
     {
         mbedtls_printf( " failed\n  !  mbedtls_x509_crt_parse returned %d\n\n", ret );
@@ -294,7 +300,8 @@ reset:
      */
     mbedtls_printf( "  . Performing the SSL/TLS handshake..." );
     fflush( stdout );
-
+	struct mbedtls_timing_hr_time handshaketimer;
+	(void)mbedtls_timing_get_timer(&handshaketimer, 1);
     while( ( ret = mbedtls_ssl_handshake( &ssl ) ) != 0 )
     {
         if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE )
@@ -303,8 +310,30 @@ reset:
             goto reset;
         }
     }
+    mbedtls_printf(" ok\n");
 
-    mbedtls_printf( " ok\n" );
+#if defined(MBEDTLS_PEFORMANCE)
+	ssl.performance->handshake = mbedtls_timing_get_timer(&handshaketimer, 0);
+	
+	mbedtls_printf( "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i\n",
+        performance.handshake,
+        performance.sphincs_sign,
+        performance.kyber_dec,
+        performance.kyber_genkey,
+        performance.parse_client_hello,
+        performance.write_server_hello,
+        performance.write_server_certificate,
+        performance.write_server_key_exchange,
+        performance.write_server_hello_done,
+        performance.parse_client_key_exchange,
+        performance.parse_client_change_cipher,
+        performance.parse_client_finish,
+        performance.write_server_change_cipher,
+        performance.write_server_finish,
+        performance.hashs
+	);
+#endif	
+    
 
     /*
      * 6. Read the HTTP Request

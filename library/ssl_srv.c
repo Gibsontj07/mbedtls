@@ -75,6 +75,11 @@
 #include "mbedtls/platform_time.h"
 #endif
 
+#include "mbedtls/timing.h"
+RUNTIME_INIT
+CRYPTOTIME_INIT
+HASH_INIT
+
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY)
 int mbedtls_ssl_set_client_transport_id( mbedtls_ssl_context *ssl,
                                  const unsigned char *info,
@@ -3043,7 +3048,7 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
      * - ECDHE key exchanges
      */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__ECDHE_ENABLED)
-    if( mbedtls_ssl_ciphersuite_uses_ecdhe( ciphersuite_info ) )
+    if (mbedtls_ssl_ciphersuite_uses_ecdhe(ciphersuite_info))
     {
         /*
          * Ephemeral ECDH parameters:
@@ -3053,42 +3058,46 @@ static int ssl_prepare_server_key_exchange( mbedtls_ssl_context *ssl,
          *     ECPoint      public;
          * } ServerECDHParams;
          */
-        const mbedtls_ecp_curve_info **curve = NULL;
-        const mbedtls_ecp_group_id *gid;
+        const mbedtls_ecp_curve_info** curve = NULL;
+        const mbedtls_ecp_group_id* gid;
         int ret;
         size_t len = 0;
 
         /* Match our preference list against the offered curves */
-        for( gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++ )
-            for( curve = ssl->handshake->curves; *curve != NULL; curve++ )
-                if( (*curve)->grp_id == *gid )
+        for (gid = ssl->conf->curve_list; *gid != MBEDTLS_ECP_DP_NONE; gid++)
+            for (curve = ssl->handshake->curves; *curve != NULL; curve++)
+                if ((*curve)->grp_id == *gid)
                     goto curve_matching_done;
 
-curve_matching_done:
-        if( curve == NULL || *curve == NULL )
+    curve_matching_done:
+        if (curve == NULL || *curve == NULL)
         {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "no matching curve for ECDHE" ) );
-            return( MBEDTLS_ERR_SSL_NO_CIPHER_CHOSEN );
+            MBEDTLS_SSL_DEBUG_MSG(1, ("no matching curve for ECDHE"));
+            return(MBEDTLS_ERR_SSL_NO_CIPHER_CHOSEN);
         }
 
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "ECDHE curve: %s", (*curve)->name ) );
+        MBEDTLS_SSL_DEBUG_MSG(2, ("ECDHE curve: %s", (*curve)->name));
 
-        if( ( ret = mbedtls_ecdh_setup( &ssl->handshake->ecdh_ctx,
-                                        (*curve)->grp_id ) ) != 0 )
+        if ((ret = mbedtls_ecdh_setup(&ssl->handshake->ecdh_ctx,
+            (*curve)->grp_id)) != 0)
         {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecp_group_load", ret );
-            return( ret );
+            MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ecp_group_load", ret);
+            return(ret);
         }
-
-        if( ( ret = mbedtls_ecdh_make_params(
-                  &ssl->handshake->ecdh_ctx, &len,
-                  ssl->out_msg + ssl->out_msglen,
-                  MBEDTLS_SSL_OUT_CONTENT_LEN - ssl->out_msglen,
-                  ssl->conf->f_rng, ssl->conf->p_rng ) ) != 0 )
-        {
-            MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_make_params", ret );
-            return( ret );
-        }
+        CRYPTOTIME_START
+            if ((ret = mbedtls_ecdh_make_params(
+                &ssl->handshake->ecdh_ctx, &len,
+                ssl->out_msg + ssl->out_msglen,
+                MBEDTLS_SSL_OUT_CONTENT_LEN - ssl->out_msglen,
+                ssl->conf->f_rng, ssl->conf->p_rng)) != 0)
+            {
+                MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_ecdh_make_params", ret);
+                return(ret);
+            }
+        CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->kyber_genkey = cryptotime;
+#endif
 
 #if defined(MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED)
         dig_signed = ssl->out_msg + ssl->out_msglen;
@@ -3096,10 +3105,43 @@ curve_matching_done:
 
         ssl->out_msglen += len;
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Q );
+        MBEDTLS_SSL_DEBUG_ECDH(3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_Q);
     }
 #endif /* MBEDTLS_KEY_EXCHANGE__SOME__ECDHE_ENABLED */
+
+
+	/*
+	* - KYBER key exchange
+	*/
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__KYBER_ENABLED)
+	if (mbedtls_ssl_ciphersuite_uses_kyber(ciphersuite_info))
+	{
+		int ret;
+		size_t len = 0;
+
+		CRYPTOTIME_START
+		if ((ret = mbedtls_kyber_make_params(
+			&ssl->handshake->kyber_ctx, &len,
+			ssl->out_msg + ssl->out_msglen,
+			MBEDTLS_SSL_OUT_CONTENT_LEN - ssl->out_msglen,
+			ssl->conf->f_rng, ssl->conf->p_rng)) != 0)
+		{
+			MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_kyber_make_params", ret);
+			return(ret);
+		}
+		CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+    ssl->performance->kyber_genkey = cryptotime;
+#endif
+
+#if defined(MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED)
+		dig_signed = ssl->out_msg + ssl->out_msglen;
+#endif
+
+		ssl->out_msglen += len;
+	}
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__KYBER_ENABLED */
+
 
     /*
      *
@@ -3147,8 +3189,12 @@ curve_matching_done:
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 #if defined(MBEDTLS_SSL_PROTO_SSL3) || defined(MBEDTLS_SSL_PROTO_TLS1) || \
     defined(MBEDTLS_SSL_PROTO_TLS1_1)
-        if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
-        {
+		if (
+#if defined(MBEDTLS_SSL_SPHINCS)
+				ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS ||
+#endif /* MBEDTLS_SSL_SPHINCS */
+				ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA)
+		{
             /* B: Default hash SHA1 */
             md_alg = MBEDTLS_MD_SHA1;
         }
@@ -3264,6 +3310,8 @@ curve_matching_done:
          * after the call to ssl_prepare_server_key_exchange.
          * ssl_write_server_key_exchange also takes care of incrementing
          * ssl->out_msglen. */
+        HASH_START
+        CRYPTOTIME_START
         if( ( ret = mbedtls_pk_sign( mbedtls_ssl_own_key( ssl ),
                                      md_alg, hash, hashlen,
                                      ssl->out_msg + ssl->out_msglen + 2,
@@ -3274,6 +3322,11 @@ curve_matching_done:
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_pk_sign", ret );
             return( ret );
         }
+        CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+        ssl->performance->sphincs_sign = cryptotime;
+        ssl->performance->hashs = hash_calls;
+#endif
     }
 #endif /* MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED */
 
@@ -3807,12 +3860,17 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||                      \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) ||					   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_RSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_RSA ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA )
+#if defined(MBEDTLS_SSL_SPHINCS)
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS ||
+#endif /* MBEDTLS_SSL_SPHINCS */
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA )
     {
+        CRYPTOTIME_START
         if( ( ret = mbedtls_ecdh_read_public( &ssl->handshake->ecdh_ctx,
                                       p, end - p) ) != 0 )
         {
@@ -3820,8 +3878,7 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_RP );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_QP );
+        //MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_QP );
 
         if( ( ret = mbedtls_ecdh_calc_secret( &ssl->handshake->ecdh_ctx,
                                       &ssl->handshake->pmslen,
@@ -3832,7 +3889,10 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ecdh_calc_secret", ret );
             return( MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_CS );
         }
-
+        CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+        ssl->performance->kyber_dec = cryptotime;
+#endif
         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
                                 MBEDTLS_DEBUG_ECDH_Z );
     }
@@ -3840,7 +3900,42 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED ||
-          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED */
+          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
+
+#if defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)	||	\
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA)
+		{
+		    CRYPTOTIME_START
+			if ((ret = mbedtls_kyber_read_public(&ssl->handshake->kyber_ctx,
+				p, end - p)) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_kyber_read_public", ret);
+				return(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_RP);
+			}
+
+			//MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: ct", &ssl->handshake->kyber_ctx.key.ct);
+
+			if ((ret = mbedtls_kyber_calc_secret(&ssl->handshake->kyber_ctx,
+				&ssl->handshake->pmslen,
+				ssl->handshake->premaster,
+				MBEDTLS_MPI_MAX_SIZE)) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_kyber_calc_secret", ret);
+				return(MBEDTLS_ERR_SSL_BAD_HS_CLIENT_KEY_EXCHANGE_CS);
+			}
+			CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+			ssl->performance->kyber_dec = cryptotime;
+#endif
+			MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: pk  ", &ssl->handshake->kyber_ctx.key.pk_poly);
+			MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: ss  ", &ssl->handshake->kyber_ctx.key.ss);
+		}
+		else
+#endif /* MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED	||
+	      MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE_PSK_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_PSK )
     {
@@ -4015,7 +4110,8 @@ static int ssl_parse_client_key_exchange( mbedtls_ssl_context *ssl )
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED)  && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)&& \
-    !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)&& \
+    !defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
 static int ssl_parse_certificate_verify( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
@@ -4298,14 +4394,21 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
     switch( ssl->state )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
+            RUNTIME_START
             ssl->state = MBEDTLS_SSL_CLIENT_HELLO;
+            RUNTIME_STOP
             break;
 
         /*
          *  <==   ClientHello
          */
         case MBEDTLS_SSL_CLIENT_HELLO:
+            RUNTIME_START
             ret = ssl_parse_client_hello( ssl );
+            RUNTIME_START
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->parse_client_hello = runtime;
+#endif
             break;
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -4321,23 +4424,45 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
          *        ServerHelloDone
          */
         case MBEDTLS_SSL_SERVER_HELLO:
+            RUNTIME_START
             ret = ssl_write_server_hello( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->write_server_hello = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_SERVER_CERTIFICATE:
+            RUNTIME_START
             ret = mbedtls_ssl_write_certificate( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->write_server_certificate = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_SERVER_KEY_EXCHANGE:
+            RUNTIME_START
             ret = ssl_write_server_key_exchange( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->write_server_key_exchange = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_CERTIFICATE_REQUEST:
+            RUNTIME_START
             ret = ssl_write_certificate_request( ssl );
+            RUNTIME_STOP
             break;
 
         case MBEDTLS_SSL_SERVER_HELLO_DONE:
+            RUNTIME_START
             ret = ssl_write_server_hello_done( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->write_server_hello_done = runtime;
+#endif
             break;
 
         /*
@@ -4348,23 +4473,42 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
          *        Finished
          */
         case MBEDTLS_SSL_CLIENT_CERTIFICATE:
+            RUNTIME_START
             ret = mbedtls_ssl_parse_certificate( ssl );
+            RUNTIME_STOP
             break;
 
         case MBEDTLS_SSL_CLIENT_KEY_EXCHANGE:
+            RUNTIME_START
             ret = ssl_parse_client_key_exchange( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->parse_client_key_exchange = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_CERTIFICATE_VERIFY:
+            RUNTIME_START
             ret = ssl_parse_certificate_verify( ssl );
+            RUNTIME_STOP
             break;
 
         case MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC:
+            RUNTIME_START
             ret = mbedtls_ssl_parse_change_cipher_spec( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->parse_client_change_cipher = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_CLIENT_FINISHED:
+            RUNTIME_START
             ret = mbedtls_ssl_parse_finished( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->parse_client_finish = runtime;
+#endif
             break;
 
         /*
@@ -4378,11 +4522,21 @@ int mbedtls_ssl_handshake_server_step( mbedtls_ssl_context *ssl )
                 ret = ssl_write_new_session_ticket( ssl );
             else
 #endif
+                RUNTIME_START
                 ret = mbedtls_ssl_write_change_cipher_spec( ssl );
+                RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+                ssl->performance->write_server_change_cipher = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_SERVER_FINISHED:
+            RUNTIME_START
             ret = mbedtls_ssl_write_finished( ssl );
+            RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+            ssl->performance->write_server_finish = runtime;
+#endif
             break;
 
         case MBEDTLS_SSL_FLUSH_BUFFERS:

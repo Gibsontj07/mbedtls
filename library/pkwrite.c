@@ -198,7 +198,40 @@ exit:
     return( ret );
 }
 #endif /* MBEDTLS_ECP_C */
+#if defined(MBEDTLS_SPHINCS_C)
+/*
+*  SPHINCSPublicKey ::= SEQUENCE {
+*      root           OCTET STRING,
+*      pk_seed        OCTET STRING,
+*	   md_alg		  INTEGER
+*  }
+*/
+static int pk_write_sphincs_pubkey(unsigned char **p, unsigned char *start,
+	mbedtls_sphincs_context *spx)
+{
+	int ret;
+	size_t len = 0;
 
+	/* PUBLIC KEY */
+	/* MD_ALG */
+	int md_id = (int)spx->key.md_alg;
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_int(p, start, md_id));
+
+	/* PK_SEED */
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(p, start, &spx->key.pk_seed));
+	**p = MBEDTLS_ASN1_OCTET_STRING;
+
+	/* ROOT */
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(p, start, &spx->key.root));
+	**p = MBEDTLS_ASN1_OCTET_STRING;
+
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(p, start, len));
+	MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(p, start, MBEDTLS_ASN1_CONSTRUCTED |
+		MBEDTLS_ASN1_SEQUENCE));
+
+	return((int)len);
+}
+#endif /* MBEDTLS_SPHINCS_C */
 int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
                              const mbedtls_pk_context *key )
 {
@@ -220,7 +253,12 @@ int mbedtls_pk_write_pubkey( unsigned char **p, unsigned char *start,
         MBEDTLS_ASN1_CHK_ADD( len, pk_write_ec_pubkey( p, start, mbedtls_pk_ec( *key ) ) );
     else
 #endif
-        return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
+#if defined(MBEDTLS_SPHINCS_C)
+	if (mbedtls_pk_get_type(key) == MBEDTLS_PK_SPHINCS)
+		MBEDTLS_ASN1_CHK_ADD(len, pk_write_sphincs_pubkey(p, start, mbedtls_pk_sphincs(*key)));
+	else
+#endif /*MBEDTLS_SPHINCS_C*/        
+		return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     return( (int) len );
 }
@@ -416,14 +454,57 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
 
         /* version */
         MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_int( &c, buf, 1 ) );
-
-        MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c, buf, len ) );
+		MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_len( &c, buf, len ) );
         MBEDTLS_ASN1_CHK_ADD( len, mbedtls_asn1_write_tag( &c, buf, MBEDTLS_ASN1_CONSTRUCTED |
                                                     MBEDTLS_ASN1_SEQUENCE ) );
     }
     else
 #endif /* MBEDTLS_ECP_C */
-        return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
+#if defined(MBEDTLS_SPHINCS_C)
+	if (mbedtls_pk_get_type(key) == MBEDTLS_PK_SPHINCS)
+	{
+		mbedtls_sphincs_context *spx = mbedtls_pk_sphincs(*key);
+		/*
+		* SPHINCS
+		*
+		* SPHINCSPrivateKey ::= SEQUENCE {
+		*      root       OCTET STRING,
+		*      pk_seed    OCTET STRING,
+		*	   sk_seed    OCTET STRING,
+		*      sk_prf     OCTET STRING,
+		*	   md_alg     INTEGER
+		*    }
+		*/
+
+		/* PRIVATE KEY */
+		/* MD_ALG */
+		int md_id = (int)spx->key.md_alg;
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_int(&c, buf, md_id));
+
+		/* SK_PRF */
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, buf, &spx->key.sk_prf));
+		*c = MBEDTLS_ASN1_OCTET_STRING;
+
+		/* SK_SEED */
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, buf, &spx->key.sk_seed));
+		*c = MBEDTLS_ASN1_OCTET_STRING;
+
+		/* PUBLIC KEY */
+		/* PK_SEED */
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, buf, &spx->key.pk_seed));
+		*c = MBEDTLS_ASN1_OCTET_STRING;
+
+		/* ROOT */
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, buf, &spx->key.root));
+		*c = MBEDTLS_ASN1_OCTET_STRING;
+
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, buf, len));
+		MBEDTLS_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, buf, MBEDTLS_ASN1_CONSTRUCTED |
+		MBEDTLS_ASN1_SEQUENCE));
+	}
+	else
+#endif /* MBEDTLS_SPHINCS_C */        
+		return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     return( (int) len );
 }
@@ -437,7 +518,8 @@ int mbedtls_pk_write_key_der( mbedtls_pk_context *key, unsigned char *buf, size_
 #define PEM_END_PRIVATE_KEY_RSA     "-----END RSA PRIVATE KEY-----\n"
 #define PEM_BEGIN_PRIVATE_KEY_EC    "-----BEGIN EC PRIVATE KEY-----\n"
 #define PEM_END_PRIVATE_KEY_EC      "-----END EC PRIVATE KEY-----\n"
-
+#define PEM_BEGIN_PRIVATE_KEY_SPHINCS   "-----BEGIN SPHINCS PRIVATE KEY-----\n"
+#define PEM_END_PRIVATE_KEY_SPHINCS     "-----END SPHINCS PRIVATE KEY-----\n"
 /*
  * Max sizes of key per types. Shown as tag + len (+ content).
  */
@@ -575,7 +657,15 @@ int mbedtls_pk_write_key_pem( mbedtls_pk_context *key, unsigned char *buf, size_
     }
     else
 #endif
-        return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
+#if defined(MBEDTLS_SPHINCS_C)
+		if (mbedtls_pk_get_type(key) == MBEDTLS_PK_SPHINCS)
+		{
+			begin = PEM_BEGIN_PRIVATE_KEY_SPHINCS;
+			end = PEM_END_PRIVATE_KEY_SPHINCS;
+		}
+		else
+#endif        
+			return( MBEDTLS_ERR_PK_FEATURE_UNAVAILABLE );
 
     if( ( ret = mbedtls_pem_write_buffer( begin, end,
                                   output_buf + sizeof(output_buf) - ret,

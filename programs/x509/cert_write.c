@@ -215,11 +215,18 @@ int write_certificate( mbedtls_x509write_cert *crt, const char *output_file,
 {
     int ret;
     FILE *f;
+#if defined(MBEDTLS_SPHINCS_C)
+    unsigned char output_buf[MBEDTLS_SPHINCS_MAX_SIZE];
+    memset(output_buf, 0, MBEDTLS_SPHINCS_MAX_SIZE);
+#else
     unsigned char output_buf[4096];
+    memset(output_buf, 0, 4096);
+#endif
+
     size_t len = 0;
 
-    memset( output_buf, 0, 4096 );
-    if( ( ret = mbedtls_x509write_crt_pem( crt, output_buf, 4096,
+
+    if( ( ret = mbedtls_x509write_crt_pem( crt, output_buf, sizeof(output_buf),
                                            f_rng, p_rng ) ) < 0 )
         return( ret );
 

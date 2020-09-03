@@ -65,6 +65,9 @@
 #if defined(MBEDTLS_ECP_C)
 #include "mbedtls/ecp.h"
 #endif
+#if defined(MBEDTLS_SPHINCS_C)
+#include "pq/spx.h"
+#endif
 #if defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdsa.h"
 #endif
@@ -597,7 +600,65 @@ static int pk_get_rsapubkey( unsigned char **p,
     return( 0 );
 }
 #endif /* MBEDTLS_RSA_C */
+#if defined(MBEDTLS_SPHINCS_C)
+/*
+* Parse a public SPHINCS key
+*/
+static int pk_get_sphincs_pubkey(unsigned char **p,
+		const unsigned char *end,
+		mbedtls_sphincs_context *spx)
+{
+	int ret;
+	size_t len;
 
+	/*
+	* SPHINCS
+	*
+	* SPHINCSPublicKey ::= SEQUENCE {
+	*      root       OCTET STRING,
+	*      pk_seed    OCTET STRING,
+	*	   md_alg	  INTEGER
+	*    }
+	*/
+
+	if ((ret = mbedtls_asn1_get_tag(p, end, &len,
+		MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
+	{
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	end = *p + len;
+
+	if ((ret = mbedtls_asn1_get_tag(p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&spx->key.root, *p, len)) != 0)
+	{
+		mbedtls_sphincs_free(spx);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	*p += len;
+
+	if ((ret = mbedtls_asn1_get_tag(p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&spx->key.pk_seed, *p, len)) != 0)
+	{
+		mbedtls_sphincs_free(spx);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	*p += len;
+
+	int md_id = 0;
+	if ((ret = mbedtls_asn1_get_int(p, end, &md_id)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	spx->key.md_alg = (mbedtls_md_type_t)md_id;
+
+	return(0);
+}
+#endif /* MBEDTLS_SPHINCS_C */
 /* Get a PK algorithm identifier
  *
  *  AlgorithmIdentifier  ::=  SEQUENCE  {
@@ -689,7 +750,14 @@ int mbedtls_pk_parse_subpubkey( unsigned char **p, const unsigned char *end,
             ret = pk_get_ecpubkey( p, end, mbedtls_pk_ec( *pk ) );
     } else
 #endif /* MBEDTLS_ECP_C */
-        ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
+#if defined(MBEDTLS_SPHINCS_C)
+	if (pk_alg == MBEDTLS_PK_SPHINCS)
+	{
+		ret = pk_get_sphincs_pubkey(p, end, mbedtls_pk_sphincs(*pk));
+	}
+	else
+#endif /* MBEDTLS_SPHINCS_C */        
+		ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
 
     if( ret == 0 && *p != end )
         ret = MBEDTLS_ERR_PK_INVALID_PUBKEY
@@ -1012,7 +1080,91 @@ static int pk_parse_key_sec1_der( mbedtls_ecp_keypair *eck,
     return( 0 );
 }
 #endif /* MBEDTLS_ECP_C */
+#if defined(MBEDTLS_SPHINCS_C)
+/*
+* Parse a private SPHINCS key
+*/
+static int pk_parse_key_sphincs_der(mbedtls_sphincs_context *spx,
+	const unsigned char *key,
+	size_t keylen)
+{
+	int ret;
+	size_t len;
+	unsigned char *p = (unsigned char *)key;
+	unsigned char *end = p + keylen;
 
+	/*
+	* SPHINCS
+	*
+	* SPHINCSPrivateKey ::= SEQUENCE {
+	*      root       OCTET STRING,
+	*      pk_seed    OCTET STRING,
+	*	   sk_seed    OCTET STRING,
+	*      sk_prf     OCTET STRING,
+	*      md_alg	  INTEGER
+	*    }
+	*/
+
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len,
+		MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
+	{
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	end = p + len;
+
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&spx->key.root, p, len)) != 0)
+	{
+		mbedtls_sphincs_free(spx);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	p += len;
+
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&spx->key.pk_seed, p, len)) != 0)
+	{
+		mbedtls_sphincs_free(spx);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	p += len;
+
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&spx->key.sk_seed, p, len)) != 0)
+	{
+		mbedtls_sphincs_free(spx);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	p += len;
+
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&spx->key.sk_prf, p, len)) != 0)
+	{
+		mbedtls_sphincs_free(spx);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	p += len;
+
+	int md_id = 0;
+	if ((ret = mbedtls_asn1_get_int(&p, end, &md_id)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	spx->key.md_alg = (mbedtls_md_type_t)md_id;
+
+	return(0);
+}
+#endif /* MBEDTLS_SPHINCS_C */
 /*
  * Parse an unencrypted PKCS#8 encoded private key
  *
@@ -1321,6 +1473,36 @@ int mbedtls_pk_parse_key( mbedtls_pk_context *pk,
     else if( ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT )
         return( ret );
 #endif /* MBEDTLS_ECP_C */
+#if defined(MBEDTLS_SPHINCS_C)
+	/* Avoid calling mbedtls_pem_read_buffer() on non-null-terminated string */
+	if (keylen == 0 || key[keylen - 1] != '\0')
+		ret = MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT;
+	else
+		ret = mbedtls_pem_read_buffer(&pem,
+			"-----BEGIN SPHINCS PRIVATE KEY-----",
+			"-----END SPHINCS PRIVATE KEY-----",
+			key, pwd, pwdlen, &len);
+	if (ret == 0)
+	{
+		pk_info = mbedtls_pk_info_from_type(MBEDTLS_PK_SPHINCS);
+
+		if ((ret = mbedtls_pk_setup(pk, pk_info)) != 0 ||
+			(ret = pk_parse_key_sphincs_der(mbedtls_pk_sphincs(*pk),
+				pem.buf, pem.buflen)) != 0)
+		{
+			mbedtls_pk_free(pk);
+		}
+
+		mbedtls_pem_free(&pem);
+		return(ret);
+	}
+	else if (ret == MBEDTLS_ERR_PEM_PASSWORD_MISMATCH)
+		return(MBEDTLS_ERR_PK_PASSWORD_MISMATCH);
+	else if (ret == MBEDTLS_ERR_PEM_PASSWORD_REQUIRED)
+		return(MBEDTLS_ERR_PK_PASSWORD_REQUIRED);
+	else if (ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT)
+		return(ret);
+#endif /* MBEDTLS_SPHINCS_C */
 
     /* Avoid calling mbedtls_pem_read_buffer() on non-null-terminated string */
     if( key[keylen - 1] != '\0' )

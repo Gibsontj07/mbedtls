@@ -129,7 +129,9 @@ const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_default =
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA224 ) |
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
-    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
+	MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
+	MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ) |
+    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHAKE256 ),
     0xFFFFFFF, /* Any PK alg    */
     0xFFFFFFF, /* Any curve     */
     2048,
@@ -249,7 +251,17 @@ static int x509_profile_check_key( const mbedtls_x509_crt_profile *profile,
     }
 #endif
 
-    return( -1 );
+#if defined(MBEDTLS_SPHINCS_C)
+	if (pk_alg == MBEDTLS_PK_SPHINCS)
+	{
+		if (mbedtls_pk_get_bitlen(pk) >= 0)
+			return( 0 );
+		
+		return( -1 );
+	}
+#endif
+	
+	return( -1 );
 }
 
 /*
@@ -2114,7 +2126,7 @@ check_signature:
                 fallback_parent = parent;
                 fallback_signature_is_good = signature_is_good;
             }
-
+        
             continue;
         }
 
@@ -2337,11 +2349,11 @@ static int x509_crt_verify_chain(
         flags = &cur->flags;
 
         /* Check time-validity (all certificates) */
-        if( mbedtls_x509_time_is_past( &child->valid_to ) )
-            *flags |= MBEDTLS_X509_BADCERT_EXPIRED;
+        //if( mbedtls_x509_time_is_past( &child->valid_to ) )
+        //    *flags |= MBEDTLS_X509_BADCERT_EXPIRED;
 
-        if( mbedtls_x509_time_is_future( &child->valid_from ) )
-            *flags |= MBEDTLS_X509_BADCERT_FUTURE;
+        //if( mbedtls_x509_time_is_future( &child->valid_from ) )
+        //    *flags |= MBEDTLS_X509_BADCERT_FUTURE;
 
         /* Stop here for trusted roots (but not for trusted EE certs) */
         if( child_is_trusted )

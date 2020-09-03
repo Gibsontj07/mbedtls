@@ -76,6 +76,13 @@
 #include "mbedtls/platform_util.h"
 #endif
 
+/* Performance init */
+#include "mbedtls/timing.h"
+RUNTIME_INIT
+CRYPTOTIME_INIT
+HASH_INIT
+
+
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
                                    unsigned char *buf,
@@ -253,7 +260,12 @@ static int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
         sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_SIG_RSA;
 #endif
     }
-
+#if defined(MBEDTLS_SPHINCS_C)
+	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_HASH_SHA256;
+	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_SIG_SPHINCS;
+	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_HASH_SHAKE256;
+	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_SIG_SPHINCS;
+#endif
     /*
      * enum {
      *     none(0), md5(1), sha1(2), sha224(3), sha256(4), sha384(5),
@@ -2247,7 +2259,8 @@ static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl,
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||                      \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) ||					   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
 static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
@@ -2284,11 +2297,13 @@ static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
           MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED ||
-          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED */
+          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||					   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
 static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
                                          unsigned char **p,
                                          unsigned char *end )
@@ -2325,7 +2340,8 @@ static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
 }
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
-          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED */
+          MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED 	||
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 static int ssl_parse_server_psk_hint( mbedtls_ssl_context *ssl,
@@ -2451,7 +2467,8 @@ static int ssl_write_encrypted_pms( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
 #if defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) ||                       \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                     \
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
 static int ssl_parse_signature_algorithm( mbedtls_ssl_context *ssl,
                                           unsigned char **p,
                                           unsigned char *end,
@@ -2705,10 +2722,14 @@ start_processing:
           MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||                     \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||				   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_RSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
+#if defined(MBEDTLS_SSL_SPHINCS)
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS ||
+#endif /* MBEDTLS_SSL_SPHINCS */
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
         if( ssl_parse_server_ecdh_params( ssl, &p, end ) != 0 )
         {
@@ -2723,7 +2744,24 @@ start_processing:
     else
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED ||
-          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED */
+          MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
+#if defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)	||	\
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS  ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA)
+		{
+			if (mbedtls_kyber_read_params(&ssl->handshake->kyber_ctx, &p, end) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_MSG(1, ("bad server key exchange message"));
+				mbedtls_ssl_send_alert_message(ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+					MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER);
+				return(MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE);
+		}
+	}
+		else
+#endif /* MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED	||
+		  MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE )
     {
@@ -2894,6 +2932,8 @@ start_processing:
             return( MBEDTLS_ERR_SSL_PK_TYPE_MISMATCH );
         }
 
+        HASH_START
+        CRYPTOTIME_START
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
         if( ssl->handshake->ecrs_enabled )
             rs_ctx = &ssl->handshake->ecrs_ctx.pk;
@@ -2917,6 +2957,12 @@ start_processing:
 #endif
             return( ret );
         }
+        CRYPTOTIME_STOP
+        //MBEDTLS_SSL_DEBUG_MSG( 0, ( "Verify Server Key Exchange in µs. %i",  time) );
+#if defined(MBEDTLS_PEFORMANCE)
+        ssl->performance->sphincs_verify = cryptotime;
+        ssl->performance->hashs = hash_calls;
+#endif
     }
 #endif /* MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED */
 
@@ -2965,11 +3011,13 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
         return( 0 );
     }
 
+    NETTIME_START
     if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         return( ret );
     }
+    NETTIME_STOP
 
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
@@ -3124,11 +3172,13 @@ static int ssl_parse_server_hello_done( mbedtls_ssl_context *ssl )
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> parse server hello done" ) );
 
+    NETTIME_START
     if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         return( ret );
     }
+    NETTIME_STOP
 
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE )
     {
@@ -3208,17 +3258,19 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||                      \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) ||					   \
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_RSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_RSA ||
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS ||
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_RSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA )
     {
         /*
          * ECDH key exchange -- send client public value
          */
         i = 4;
-
+        CRYPTOTIME_START
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
         if( ssl->handshake->ecrs_enabled )
         {
@@ -3243,8 +3295,7 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
             return( ret );
         }
 
-        MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
-                                MBEDTLS_DEBUG_ECDH_Q );
+        //MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx, MBEDTLS_DEBUG_ECDH_Q );
 
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
         if( ssl->handshake->ecrs_enabled )
@@ -3270,7 +3321,10 @@ ecdh_calc_secret:
 #endif
             return( ret );
         }
-
+        CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+        ssl->performance->kyber_enc = cryptotime;
+#endif
         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
                                 MBEDTLS_DEBUG_ECDH_Z );
     }
@@ -3278,7 +3332,52 @@ ecdh_calc_secret:
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED ||
-          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED */
+          MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_ECDH_SPHINCS_ENABLED */
+#if defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)	||	\
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA)
+		{
+			/*
+			* KYBER key exchange -- send client public value
+			*/
+			i = 4;
+
+			CRYPTOTIME_START
+			ret = mbedtls_kyber_make_public(&ssl->handshake->kyber_ctx,
+				&n,
+				&ssl->out_msg[i], 1000,
+				ssl->conf->f_rng, ssl->conf->p_rng);
+
+			if (ret != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_kyber_make_public", ret);
+				return(ret);
+			}
+
+			//MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: ct  ", &ssl->handshake->kyber_ctx.key.ct);
+
+			if ((ret = mbedtls_kyber_calc_secret(&ssl->handshake->kyber_ctx,
+				&ssl->handshake->pmslen,
+				ssl->handshake->premaster,
+				MBEDTLS_MPI_MAX_SIZE)) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_kyber_calc_secret", ret);
+				return(ret);
+			}
+			CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+			ssl->performance->kyber_enc = cryptotime;
+#endif
+      //MBEDTLS_SSL_DEBUG_MSG( 0, ( "Shared Secret in µs. %i",  time/1000) );
+
+			MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: pk  ", &ssl->handshake->kyber_ctx.key.pk_poly);
+			MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: ss  ", &ssl->handshake->kyber_ctx.key.ss);
+		}
+		else
+#endif /* MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
     if( mbedtls_ssl_ciphersuite_uses_psk( ciphersuite_info ) )
     {
@@ -3435,11 +3534,13 @@ ecdh_calc_secret:
 
     ssl->state++;
 
+    NETTIME_START
     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
         return( ret );
     }
+    NETTIME_STOP
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write client key exchange" ) );
 
@@ -3451,7 +3552,8 @@ ecdh_calc_secret:
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED)  && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)&& \
-    !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+    !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)&& \
+    !defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
 static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =
@@ -3647,11 +3749,13 @@ sign:
 
     ssl->state++;
 
+    NETTIME_START
     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
         return( ret );
     }
+    NETTIME_STOP
 
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write certificate verify" ) );
 
@@ -3809,14 +3913,21 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
     switch( ssl->state )
     {
         case MBEDTLS_SSL_HELLO_REQUEST:
+            RUNTIME_START
             ssl->state = MBEDTLS_SSL_CLIENT_HELLO;
+            RUNTIME_STOP
             break;
 
        /*
         *  ==>   ClientHello
         */
        case MBEDTLS_SSL_CLIENT_HELLO:
+           RUNTIME_START
            ret = ssl_write_client_hello( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->write_client_hello = runtime;
+#endif
            break;
 
        /*
@@ -3827,23 +3938,45 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         *        ServerHelloDone
         */
        case MBEDTLS_SSL_SERVER_HELLO:
+           RUNTIME_START
            ret = ssl_parse_server_hello( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->parse_server_hello = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_SERVER_CERTIFICATE:
+           RUNTIME_START
            ret = mbedtls_ssl_parse_certificate( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->parse_server_certificate = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_SERVER_KEY_EXCHANGE:
+           RUNTIME_START
            ret = ssl_parse_server_key_exchange( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->parse_server_key_exchange = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_CERTIFICATE_REQUEST:
+           RUNTIME_START
            ret = ssl_parse_certificate_request( ssl );
+           RUNTIME_STOP
            break;
 
        case MBEDTLS_SSL_SERVER_HELLO_DONE:
+           RUNTIME_START
            ret = ssl_parse_server_hello_done( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->parse_server_hello_done = runtime;
+#endif
            break;
 
        /*
@@ -3854,23 +3987,42 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
         *        Finished
         */
        case MBEDTLS_SSL_CLIENT_CERTIFICATE:
+           RUNTIME_START
            ret = mbedtls_ssl_write_certificate( ssl );
+           RUNTIME_STOP
            break;
 
        case MBEDTLS_SSL_CLIENT_KEY_EXCHANGE:
+           RUNTIME_START
            ret = ssl_write_client_key_exchange( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->write_client_key_exchange = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_CERTIFICATE_VERIFY:
+           RUNTIME_START
            ret = ssl_write_certificate_verify( ssl );
+           RUNTIME_STOP
            break;
 
        case MBEDTLS_SSL_CLIENT_CHANGE_CIPHER_SPEC:
+           RUNTIME_START
            ret = mbedtls_ssl_write_change_cipher_spec( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->write_client_change_cipher = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_CLIENT_FINISHED:
+           RUNTIME_START
            ret = mbedtls_ssl_write_finished( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->write_client_finish = runtime;
+#endif
            break;
 
        /*
@@ -3885,11 +4037,21 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 #endif
 
        case MBEDTLS_SSL_SERVER_CHANGE_CIPHER_SPEC:
+           RUNTIME_START
            ret = mbedtls_ssl_parse_change_cipher_spec( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->parse_server_change_cipher = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_SERVER_FINISHED:
+           RUNTIME_START
            ret = mbedtls_ssl_parse_finished( ssl );
+           RUNTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+           ssl->performance->parse_server_finish = runtime;
+#endif
            break;
 
        case MBEDTLS_SSL_FLUSH_BUFFERS:

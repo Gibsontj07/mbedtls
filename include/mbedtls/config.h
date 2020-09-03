@@ -961,7 +961,7 @@
  *      MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_RSA_PSK_WITH_RC4_128_SHA
  */
-#define MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_RSA_PSK_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
@@ -989,7 +989,7 @@
  *      MBEDTLS_TLS_RSA_WITH_RC4_128_SHA
  *      MBEDTLS_TLS_RSA_WITH_RC4_128_MD5
  */
-#define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
@@ -1022,7 +1022,7 @@
  *             See dhm.h for more details.
  *
  */
-#define MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
@@ -1047,7 +1047,7 @@
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
  *      MBEDTLS_TLS_ECDHE_RSA_WITH_RC4_128_SHA
  */
-#define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
@@ -1072,6 +1072,45 @@
  *      MBEDTLS_TLS_ECDHE_ECDSA_WITH_RC4_128_SHA
  */
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+
+/**
+ * \def MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED
+ *
+ * Enable the ECDHE-SPHINCS based ciphersuite modes in SSL / TLS.
+ *
+ * Requires: MBEDTLS_ECDH_C, MBEDTLS_SPHINCS_C, MBEDTLS_X509_CRT_PARSE_C,
+ *
+ * This enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      MBEDTLS_TLS_ECDHE_SPHINCS_WITH_AES_256_GCM_SHA256
+ */
+#define MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED
+
+ /**
+ * \def MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED
+ *
+ * Enable the KYBER-SPHINCS based ciphersuite modes in SSL / TLS.
+ *
+ * Requires: MBEDTLS_KYBER_C, MBEDTLS_SPHINCS_C, MBEDTLS_X509_CRT_PARSE_C,
+ *
+ * This enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      MBEDTLS_TLS_KYBER_SPHINCS_WITH_AES_256_GCM_SHA256
+ */
+#define MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED
+
+ /**
+ * \def MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED
+ *
+ * Enable the KYBER-ECDSA based ciphersuite modes in SSL / TLS.
+ *
+ * Requires: MBEDTLS_KYBER_C, MBEDTLS_ECDSA_C, MBEDTLS_X509_CRT_PARSE_C,
+ *
+ * This enables the following ciphersuites (if other requisites are
+ * enabled as well):
+ *      MBEDTLS_TLS_KYBER_ECDSA_WITH_AES_256_GCM_SHA256
+ */
+#define MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED
 
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
@@ -1342,6 +1381,30 @@
  * Uncomment to enable the smaller implementation of SHA256.
  */
 //#define MBEDTLS_SHA256_SMALLER
+
+/**
+* \def MBEDTLS_SPHINCS_SSL
+*
+* Enable SPHINCS+ ciphersuites.
+*
+*/
+#define MBEDTLS_SSL_SPHINCS
+
+/**
+* \def MBEDTLS_SSL_HS_FRAGMENTATION
+*
+* Enable handshake fragmentation.
+*
+*/
+#define MBEDTLS_SSL_HS_FRAGMENTATION
+
+/**
+* \def MBEDTLS_PEFORMANCE
+*
+* Enable handshake performance measures.
+*
+*/
+#define MBEDTLS_PEFORMANCE
 
 /**
  * \def MBEDTLS_SSL_ALL_ALERT_MESSAGES
@@ -1802,7 +1865,7 @@
  *
  * Comment this macro to disallow using RSASSA-PSS in certificates.
  */
-#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
+//#define MBEDTLS_X509_RSASSA_PSS_SUPPORT
 
 /**
  * \def MBEDTLS_ZLIB_SUPPORT
@@ -2314,6 +2377,37 @@
 #define MBEDTLS_ECDSA_C
 
 /**
+ * \def MBEDTLS_SPHINCS_C
+ *
+ * Enable the SPHINCS+ algorithm.
+ *
+ * Module:  library/spx.c
+ * Caller:
+ *
+ * This module is used by the following key exchanges:
+ *      PQ
+ *
+ * Requires: TODO
+ */
+#define MBEDTLS_SPHINCS_C
+#define MBEDTLS_SPHINCS_MAX_SIZE 100000
+
+ /**
+ * \def MBEDTLS_KYBER_C
+ *
+ * Enable the KYBER algorithm.
+ *
+ * Module:  library/kyber.c
+ * Caller:
+ *
+ * This module is used by the following key exchanges:
+ *      PQ
+ *
+ * Requires: TODO
+ */
+#define MBEDTLS_KYBER_C
+
+/**
  * \def MBEDTLS_ECJPAKE_C
  *
  * Enable the elliptic curve J-PAKE library.
@@ -2772,7 +2866,7 @@
  *
  * Requires: MBEDTLS_BIGNUM_C, MBEDTLS_OID_C
  */
-#define MBEDTLS_RSA_C
+//#define MBEDTLS_RSA_C
 
 /**
  * \def MBEDTLS_SHA1_C
@@ -2827,6 +2921,13 @@
  * This module adds support for SHA-384 and SHA-512.
  */
 #define MBEDTLS_SHA512_C
+
+/**
+* \def MBEDTLS_SHAKE256_C
+*
+* Enable the SHAKE256 cryptographic hash algorithms.
+*/
+#define MBEDTLS_SHAKE256_C
 
 /**
  * \def MBEDTLS_SSL_CACHE_C

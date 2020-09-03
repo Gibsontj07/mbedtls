@@ -422,6 +422,21 @@ static const oid_sig_alg_t oid_sig_alg[] =
     },
 #endif /* MBEDTLS_SHA512_C */
 #endif /* MBEDTLS_ECDSA_C */
+#if defined(MBEDTLS_SPHINCS_C)
+#if defined(MBEDTLS_SHA256_C)
+	{
+		{ ADD_LEN(MBEDTLS_OID_SPHINCS_SHA256),     "sphincs-with-SHA256",    "SPHINCS with SHA256" },
+		MBEDTLS_MD_SHA256,   MBEDTLS_PK_SPHINCS,
+	},
+#endif /* MBEDTLS_SHA256_C */
+#if defined(MBEDTLS_SHAKE256_C)
+	{
+		{ ADD_LEN(MBEDTLS_OID_SPHINCS_SHAKE256),     "sphincs-with-SHAKE256",    "SPHINCS with SHAKE256" },
+		MBEDTLS_MD_SHAKE256,   MBEDTLS_PK_SPHINCS,
+	},
+#endif /* MBEDTLS_SHAKE256_C */
+#endif /* MBEDTLS_SPHINCS_C */
+
 #if defined(MBEDTLS_RSA_C)
     {
         { ADD_LEN( MBEDTLS_OID_RSASSA_PSS ),        "RSASSA-PSS",           "RSASSA-PSS" },
@@ -459,7 +474,11 @@ static const oid_pk_alg_t oid_pk_alg[] =
         MBEDTLS_PK_ECKEY,
     },
     {
-        { ADD_LEN( MBEDTLS_OID_EC_ALG_ECDH ),          "id-ecDH",          "EC key for ECDH" },
+		{ ADD_LEN(MBEDTLS_OID_SPHINCS_ALG),  "id-sphincsPublicKey",   "Generic SPHINCS key" },
+		MBEDTLS_PK_SPHINCS,
+	},
+    {        
+		{ ADD_LEN( MBEDTLS_OID_EC_ALG_ECDH ),          "id-ecDH",          "EC key for ECDH" },
         MBEDTLS_PK_ECKEY_DH,
     },
     {

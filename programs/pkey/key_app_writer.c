@@ -369,6 +369,18 @@ int main( int argc, char *argv[] )
         }
         else
 #endif
+#if defined(MBEDTLS_SPHINCS_C)
+		if (mbedtls_pk_get_type(&key) == MBEDTLS_PK_SPHINCS)
+		{
+			mbedtls_sphincs_context *sphincs = mbedtls_pk_sphincs(key);
+
+			mbedtls_mpi_write_file("Root:    ", &sphincs->key.root, 16, NULL);
+			mbedtls_mpi_write_file("PK_Seed: ", &sphincs->key.pk_seed, 16, NULL);
+			mbedtls_mpi_write_file("SK_Seed: ", &sphincs->key.sk_seed, 16, NULL);
+			mbedtls_mpi_write_file("SK_PRF:  ", &sphincs->key.sk_prf, 16, NULL);
+		}
+		else
+#endif /* MBEDTLS_SPHINCS_C */
             mbedtls_printf("key type not supported yet\n");
 
     }

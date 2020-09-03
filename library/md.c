@@ -194,6 +194,10 @@ const mbedtls_md_info_t *mbedtls_md_info_from_type( mbedtls_md_type_t md_type )
         case MBEDTLS_MD_SHA512:
             return( &mbedtls_sha512_info );
 #endif
+#if defined(MBEDTLS_SHAKE256_C)
+        case MBEDTLS_MD_SHAKE256:
+            return(&mbedtls_shake256_info);
+#endif
         default:
             return( NULL );
     }

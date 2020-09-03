@@ -309,11 +309,14 @@
 #define MBEDTLS_SSL_HASH_SHA256              4
 #define MBEDTLS_SSL_HASH_SHA384              5
 #define MBEDTLS_SSL_HASH_SHA512              6
+#define MBEDTLS_SSL_HASH_SHAKE256			 7
 
 #define MBEDTLS_SSL_SIG_ANON                 0
 #define MBEDTLS_SSL_SIG_RSA                  1
 #define MBEDTLS_SSL_SIG_ECDSA                3
 
+/* Experimental SPHINCS */
+#define MBEDTLS_SSL_SIG_SPHINCS				 4
 /*
  * Client Certificate Types
  * RFC 5246 section 7.4.4 plus RFC 4492 section 5.5
@@ -439,6 +442,10 @@ union mbedtls_ssl_premaster_secret
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     unsigned char _pms_ecjpake[32];     /* Thread spec: SHA-256 output */
+#endif
+#if defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)     || \
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)
+	unsigned char _pms_kyber[32];
 #endif
 };
 
@@ -588,6 +595,7 @@ typedef int mbedtls_ssl_get_timer_t( void * ctx );
 typedef struct mbedtls_ssl_session mbedtls_ssl_session;
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 typedef struct mbedtls_ssl_config  mbedtls_ssl_config;
+typedef struct mbedtls_pq_performance  mbedtls_pq_performance;
 
 /* Defined in ssl_internal.h */
 typedef struct mbedtls_ssl_transform mbedtls_ssl_transform;
@@ -1047,6 +1055,38 @@ struct mbedtls_ssl_config
 #endif
 };
 
+struct mbedtls_pq_performance
+{
+    uint32_t handshake;
+
+    uint32_t write_client_hello;
+    uint32_t parse_client_hello;
+    uint32_t write_server_hello;
+    uint32_t parse_server_hello;
+    uint32_t write_server_certificate;
+    uint32_t parse_server_certificate;
+    uint32_t write_server_key_exchange;
+    uint32_t parse_server_key_exchange;
+    uint32_t write_server_hello_done;
+    uint32_t parse_server_hello_done;
+    uint32_t write_client_key_exchange;
+    uint32_t parse_client_key_exchange;
+    uint32_t write_client_change_cipher;
+    uint32_t parse_client_change_cipher;
+    uint32_t write_client_finish;
+    uint32_t parse_client_finish;
+    uint32_t write_server_change_cipher;
+    uint32_t parse_server_change_cipher;
+    uint32_t write_server_finish;
+    uint32_t parse_server_finish;
+
+    uint32_t kyber_genkey;
+    uint32_t kyber_enc;
+    uint32_t kyber_dec;
+    uint32_t sphincs_sign;
+    uint32_t sphincs_verify;
+    uint32_t hashs;
+};
 
 struct mbedtls_ssl_context
 {
@@ -1087,6 +1127,12 @@ struct mbedtls_ssl_context
 
     mbedtls_ssl_handshake_params *handshake;    /*!<  params required only during
                                               the handshake process        */
+
+#if defined(MBEDTLS_PEFORMANCE)
+    mbedtls_pq_performance* performance;
+#endif  
+
+    
 
     /*
      * Record layer transformations
