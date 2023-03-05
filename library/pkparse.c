@@ -68,6 +68,9 @@
 #if defined(MBEDTLS_SPHINCS_C)
 #include "pq/spx.h"
 #endif
+#if defined(MBEDTLS_DILITHIUM_C)
+#include "pq/dilithium.h"
+#endif
 #if defined(MBEDTLS_ECDSA_C)
 #include "mbedtls/ecdsa.h"
 #endif
@@ -659,6 +662,133 @@ static int pk_get_sphincs_pubkey(unsigned char **p,
 	return(0);
 }
 #endif /* MBEDTLS_SPHINCS_C */
+
+
+#if defined(MBEDTLS_DILITHIUM_C)
+
+/*
+* Parse a public and private Dilithium key
+*/
+
+static int pk_get_dilithium_pubkey(unsigned char **p,
+		const unsigned char *end,
+		mbedtls_dilithium_context *dilithium)
+{
+	int ret;
+	size_t len;
+
+    /*
+    * DilithiumPublicKey ::= SEQUENCE {
+    *       rho    OCTET STRING,
+    *       t1     OCTET STRING
+    *    }
+    */
+
+	if ((ret = mbedtls_asn1_get_tag(p, end, &len,
+		MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
+	{
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	end = *p + len;
+
+	if ((ret = mbedtls_asn1_get_tag(p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&dilithium->key.pk_rho, *p, len)) != 0)
+	{
+		mbedtls_dilithium_free(dilithium);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	*p += len;
+
+	if ((ret = mbedtls_asn1_get_tag(p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&dilithium->key.pk_t1, *p, len)) != 0)
+	{
+		mbedtls_dilithium_free(dilithium);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	*p += len;
+    
+    if( *p != end )
+        return( MBEDTLS_ERR_PK_INVALID_PUBKEY +
+                MBEDTLS_ERR_ASN1_LENGTH_MISMATCH );
+
+	return(0);
+}
+
+/*static int pk_parse_key_dilithium(mbedtls_dilithium_context *pk, unsigned char  *key, size_t keylen)
+{
+    int ret;
+    size_t len;
+    unsigned char *p = (unsigned char *) key;
+    unsigned char *end = p + keylen;
+
+    /*
+    * DilithiumKey ::= SEQUENCE {
+    *       SectetKey    BIT STRING,
+    *       PublicKey    BIT STRING
+    *    }
+    */
+
+/*    if ((ret = mbedtls_asn1_get_tag(&p, end, &len,
+        MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
+    {
+        return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+    }
+
+    end = *p + len;
+
+    if( ( ret = mbedtls_asn1_get_bitstring_null( &p, end, &len ) ) != 0 )
+                return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret );  
+
+    /*if(len != MBEDTLS_DILITHIUM_SK_LEN)
+        return(MBEDTLS_ERR_ASN1_LENGTH_MISMATCH);
+*/
+/*    memcpy(pk->sk, p, len);
+    *p += len;
+
+    if( ( ret = mbedtls_asn1_get_bitstring_null( &p, end, &len ) ) != 0 )
+                return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret );
+
+    /*if(len != MBEDTLS_DILITHIUM_PK_LEN)
+        return(MBEDTLS_ERR_ASN1_LENGTH_MISMATCH);    
+*/
+/*    memcpy(pk->pk, p, len);
+
+    return(0);
+}
+
+/* 
+*  Dilithium public-key parsing
+*/
+/*static int pk_get_dilithium_pubkey(unsigned char **p, const unsigned char *end, mbedtls_dilithium_context *dilithium){
+    /* 
+    * PublicKey    BIT STRING
+    */
+/*    int ret;
+    size_t len;
+    if( ( ret = mbedtls_asn1_get_bitstring_null( &p, end, &len ) ) != 0 )
+        return( MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret );
+
+/*    if(len != size_t mbedtls_pk_get_len(*dilithium))
+        return(MBEDTLS_ERR_ASN1_LENGTH_MISMATCH);  
+*/
+/*    memcpy(dilithium->pk, p, len);
+
+    p += len;
+
+    return(0);
+
+}
+*/
+#endif /* MBEDTLS_DILITHIUM_C 
+
+
 /* Get a PK algorithm identifier
  *
  *  AlgorithmIdentifier  ::=  SEQUENCE  {
@@ -750,13 +880,23 @@ int mbedtls_pk_parse_subpubkey( unsigned char **p, const unsigned char *end,
             ret = pk_get_ecpubkey( p, end, mbedtls_pk_ec( *pk ) );
     } else
 #endif /* MBEDTLS_ECP_C */
+
 #if defined(MBEDTLS_SPHINCS_C)
 	if (pk_alg == MBEDTLS_PK_SPHINCS)
 	{
 		ret = pk_get_sphincs_pubkey(p, end, mbedtls_pk_sphincs(*pk));
 	}
 	else
-#endif /* MBEDTLS_SPHINCS_C */        
+#endif /* MBEDTLS_SPHINCS_C */ 
+
+#if defined(MBEDTLS_DILITHIUM_C)
+    if (pk_alg == MBEDTLS_PK_DILITHIUM)
+    {
+        ret = pk_get_dilithium_pubkey(p, end, mbedtls_pk_dilithium(*pk));
+    }
+    else
+#endif /* MBEDTLS_DILITHIUM_C */ 
+
 		ret = MBEDTLS_ERR_PK_UNKNOWN_PK_ALG;
 
     if( ret == 0 && *p != end )
@@ -1165,6 +1305,70 @@ static int pk_parse_key_sphincs_der(mbedtls_sphincs_context *spx,
 	return(0);
 }
 #endif /* MBEDTLS_SPHINCS_C */
+
+#if defined(MBEDTLS_DILITHIUM_C)
+/*
+* Parse a private DILITHIUM key
+*/
+static int pk_parse_key_dilithium_der(mbedtls_dilithium_context *dilithium,
+	const unsigned char *key,
+	size_t keylen)
+{
+	int ret;
+	size_t len;
+	unsigned char *p = (unsigned char *)key;
+	unsigned char *end = p + keylen;
+
+	/*
+	* DILITHIUM
+	*
+	* DILITHIUMPrivateKey 
+	*/
+    
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len,
+		MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)) != 0)
+	{
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+    
+	end = p + len;
+
+	if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+        
+	if ((ret = mbedtls_mpi_read_binary(&dilithium->key.pk_rho, p, len)) != 0)
+	{
+		mbedtls_dilithium_free(dilithium);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	p += len;
+    
+    
+    if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_OCTET_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+        
+	if ((ret = mbedtls_mpi_read_binary(&dilithium->key.pk_t1, p, len)) != 0)
+	{
+		mbedtls_dilithium_free(dilithium);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+    
+    p += len;
+    
+    
+    if ((ret = mbedtls_asn1_get_tag(&p, end, &len, MBEDTLS_ASN1_BIT_STRING)) != 0)
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+
+	if ((ret = mbedtls_mpi_read_binary(&dilithium->key.sk, p, len)) != 0)
+	{
+		mbedtls_dilithium_free(dilithium);
+		return(MBEDTLS_ERR_PK_KEY_INVALID_FORMAT + ret);
+	}
+
+	return(0);
+}
+#endif /* MBEDTLS_DILITHIUM_C */
 /*
  * Parse an unencrypted PKCS#8 encoded private key
  *
@@ -1503,6 +1707,37 @@ int mbedtls_pk_parse_key( mbedtls_pk_context *pk,
 	else if (ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT)
 		return(ret);
 #endif /* MBEDTLS_SPHINCS_C */
+
+#if defined(MBEDTLS_DILITHIUM_C)
+    /* Avoid calling mbedtls_pem_read_buffer() on non-null-terminated string */
+    if (keylen == 0 || key[keylen - 1] != '\0')
+        ret = MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT;
+    else
+        ret = mbedtls_pem_read_buffer(&pem,
+            "-----BEGIN DILITHIUM PRIVATE KEY-----",
+            "-----END DILITHIUM PRIVATE KEY-----",
+            key, pwd, pwdlen, &len);
+    if (ret == 0)
+    {
+        pk_info = mbedtls_pk_info_from_type(MBEDTLS_PK_DILITHIUM);
+
+        if ((ret = mbedtls_pk_setup(pk, pk_info)) != 0 ||
+            (ret = pk_parse_key_dilithium_der(mbedtls_pk_dilithium(*pk),
+                pem.buf, pem.buflen)) != 0)
+        {
+            mbedtls_pk_free(pk);
+        }
+
+        mbedtls_pem_free(&pem);
+        return(ret);
+    }
+    else if (ret == MBEDTLS_ERR_PEM_PASSWORD_MISMATCH)
+        return(MBEDTLS_ERR_PK_PASSWORD_MISMATCH);
+    else if (ret == MBEDTLS_ERR_PEM_PASSWORD_REQUIRED)
+        return(MBEDTLS_ERR_PK_PASSWORD_REQUIRED);
+    else if (ret != MBEDTLS_ERR_PEM_NO_HEADER_FOOTER_PRESENT)
+        return(ret);
+#endif /* MBEDTLS_DILITHIUM_C */
 
     /* Avoid calling mbedtls_pem_read_buffer() on non-null-terminated string */
     if( key[keylen - 1] != '\0' )

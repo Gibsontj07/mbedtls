@@ -325,8 +325,10 @@ int mbedtls_asn1_write_bitstring( unsigned char **p, unsigned char *start,
     byte_len = ( bits + 7 ) / 8;
     unused_bits = ( byte_len * 8 ) - bits;
 
-    if( *p < start || (size_t)( *p - start ) < byte_len + 1 )
+    if( *p < start || (size_t)( *p - start ) < byte_len + 1 ){
+        printf("\n*p = %d, start = %d, (*p-start) = %d, (byte_len + 1) = %d\n", *p, start, ( *p - start ), byte_len + 1);
         return( MBEDTLS_ERR_ASN1_BUF_TOO_SMALL );
+    }
 
     len = byte_len + 1;
 

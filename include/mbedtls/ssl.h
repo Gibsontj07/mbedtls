@@ -317,6 +317,10 @@
 
 /* Experimental SPHINCS */
 #define MBEDTLS_SSL_SIG_SPHINCS				 4
+
+/* Experimental DILITHIUM */
+#define MBEDTLS_SSL_SIG_DILITHIUM			 2
+
 /*
  * Client Certificate Types
  * RFC 5246 section 7.4.4 plus RFC 4492 section 5.5
@@ -443,9 +447,15 @@ union mbedtls_ssl_premaster_secret
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     unsigned char _pms_ecjpake[32];     /* Thread spec: SHA-256 output */
 #endif
-#if defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)     || \
+#if defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)        || \
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED)      || \
     defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)
 	unsigned char _pms_kyber[32];
+#endif
+#if defined(MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED)        || \
+    defined(MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED)      || \
+    defined(MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED)
+	unsigned char _pms_saber[32];
 #endif
 };
 
@@ -596,6 +606,7 @@ typedef struct mbedtls_ssl_session mbedtls_ssl_session;
 typedef struct mbedtls_ssl_context mbedtls_ssl_context;
 typedef struct mbedtls_ssl_config  mbedtls_ssl_config;
 typedef struct mbedtls_pq_performance  mbedtls_pq_performance;
+typedef struct mbedtls_pq_avg_performance  mbedtls_pq_avg_performance;
 
 /* Defined in ssl_internal.h */
 typedef struct mbedtls_ssl_transform mbedtls_ssl_transform;
@@ -1057,7 +1068,7 @@ struct mbedtls_ssl_config
 
 struct mbedtls_pq_performance
 {
-    uint32_t handshake;
+    double handshake;
 
     uint32_t write_client_hello;
     uint32_t parse_client_hello;
@@ -1080,12 +1091,34 @@ struct mbedtls_pq_performance
     uint32_t write_server_finish;
     uint32_t parse_server_finish;
 
-    uint32_t kyber_genkey;
-    uint32_t kyber_enc;
-    uint32_t kyber_dec;
-    uint32_t sphincs_sign;
-    uint32_t sphincs_verify;
-    uint32_t hashs;
+    double kyber_genkey;
+    double kyber_enc;
+    double kyber_dec;
+    double saber_genkey;
+    double saber_enc;
+    double saber_dec;
+    double sphincs_sign;
+    double sphincs_verify;
+    double dilithium_sign;
+    double dilithium_verify;
+    double hashs;
+};
+
+struct mbedtls_pq_avg_performance
+{
+    double handshake_x;
+    double handshake_x2;
+    double kyber_genkey_x;
+    double kyber_genkey_x2;
+    double kyber_enc_x;
+    double kyber_enc_x2;
+    double kyber_dec_x;
+    double kyber_dec_x2;
+    double sphincs_sign_x;
+    double sphincs_sign_x2;
+    double sphincs_verify_x;
+    double sphincs_verify_x2;
+    uint32_t count;
 };
 
 struct mbedtls_ssl_context

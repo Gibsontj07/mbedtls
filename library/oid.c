@@ -422,20 +422,46 @@ static const oid_sig_alg_t oid_sig_alg[] =
     },
 #endif /* MBEDTLS_SHA512_C */
 #endif /* MBEDTLS_ECDSA_C */
+
 #if defined(MBEDTLS_SPHINCS_C)
 #if defined(MBEDTLS_SHA256_C)
-	{
-		{ ADD_LEN(MBEDTLS_OID_SPHINCS_SHA256),     "sphincs-with-SHA256",    "SPHINCS with SHA256" },
-		MBEDTLS_MD_SHA256,   MBEDTLS_PK_SPHINCS,
-	},
+    {
+        { ADD_LEN(MBEDTLS_OID_SPHINCS_SHA256),     "sphincs-with-SHA256",    "SPHINCS with SHA256" },
+        MBEDTLS_MD_SHA256,   MBEDTLS_PK_SPHINCS,
+    },
 #endif /* MBEDTLS_SHA256_C */
 #if defined(MBEDTLS_SHAKE256_C)
-	{
-		{ ADD_LEN(MBEDTLS_OID_SPHINCS_SHAKE256),     "sphincs-with-SHAKE256",    "SPHINCS with SHAKE256" },
-		MBEDTLS_MD_SHAKE256,   MBEDTLS_PK_SPHINCS,
-	},
+    {
+        { ADD_LEN(MBEDTLS_OID_SPHINCS_SHAKE256),     "sphincs-with-SHAKE256",    "SPHINCS with SHAKE256" },
+        MBEDTLS_MD_SHAKE256,   MBEDTLS_PK_SPHINCS,
+    },
 #endif /* MBEDTLS_SHAKE256_C */
 #endif /* MBEDTLS_SPHINCS_C */
+
+
+
+
+
+#if defined(MBEDTLS_DILITHIUM_C)
+#if defined(MBEDTLS_SHAKE256_C)
+    /* Signature algorithm OID */
+    {
+        { ADD_LEN(MBEDTLS_OID_DILITHIUM_SHAKE256),     "id-dilithium-shake256 ",    "DILITHIUM with SHAKE256" },
+        MBEDTLS_MD_SHAKE256,   MBEDTLS_PK_DILITHIUM,
+    },
+    /* Public-key OID*/
+	/*{
+		{ ADD_LEN(MBEDTLS_OID_DILITHIUM_SHAKE256),     "id-dilithium-shake256 ",    "DILITHIUM with SHAKE256" },
+		MBEDTLS_PK_DILITHIUM,
+	},*/
+
+#endif /* MBEDTLS_SHAKE256_C */
+#endif /* MBEDTLS_DILITHIUM_C */
+
+
+
+
+
 
 #if defined(MBEDTLS_RSA_C)
     {
@@ -477,6 +503,10 @@ static const oid_pk_alg_t oid_pk_alg[] =
 		{ ADD_LEN(MBEDTLS_OID_SPHINCS_ALG),  "id-sphincsPublicKey",   "Generic SPHINCS key" },
 		MBEDTLS_PK_SPHINCS,
 	},
+    {
+        { ADD_LEN(MBEDTLS_OID_DILITHIUM_ALG),  "id-dilithiumPublicKey",   "Generic DILITHIUM key" },
+        MBEDTLS_PK_DILITHIUM,
+    },
     {        
 		{ ADD_LEN( MBEDTLS_OID_EC_ALG_ECDH ),          "id-ecDH",          "EC key for ECDH" },
         MBEDTLS_PK_ECKEY_DH,
@@ -490,7 +520,6 @@ static const oid_pk_alg_t oid_pk_alg[] =
 FN_OID_TYPED_FROM_ASN1(oid_pk_alg_t, pk_alg, oid_pk_alg)
 FN_OID_GET_ATTR1(mbedtls_oid_get_pk_alg, oid_pk_alg_t, pk_alg, mbedtls_pk_type_t, pk_alg)
 FN_OID_GET_OID_BY_ATTR1(mbedtls_oid_get_oid_by_pk_alg, oid_pk_alg_t, oid_pk_alg, mbedtls_pk_type_t, pk_alg)
-
 #if defined(MBEDTLS_ECP_C)
 /*
  * For namedCurve (RFC 5480)
@@ -663,6 +692,13 @@ static const oid_md_alg_t oid_md_alg[] =
         MBEDTLS_MD_SHA512,
     },
 #endif /* MBEDTLS_SHA512_C */
+#if defined(MBEDTLS_SHAKE256_C)
+    /* Message digest OID */
+    {
+        { ADD_LEN(MBEDTLS_OID_SHAKE256),     "id-shake-256",    "SHAKE-256" },
+        MBEDTLS_MD_SHAKE256,
+    },
+#endif /* MBEDTLS_SHAKE256_C */
     {
         { NULL, 0, NULL, NULL },
         MBEDTLS_MD_NONE,

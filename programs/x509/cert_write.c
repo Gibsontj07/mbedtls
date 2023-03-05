@@ -218,13 +218,15 @@ int write_certificate( mbedtls_x509write_cert *crt, const char *output_file,
 #if defined(MBEDTLS_SPHINCS_C)
     unsigned char output_buf[MBEDTLS_SPHINCS_MAX_SIZE];
     memset(output_buf, 0, MBEDTLS_SPHINCS_MAX_SIZE);
+#elif defined(MBEDTLS_DILITHIUM_C)
+    unsigned char output_buf[100000];
+    memset(output_buf, 0, 100000);
 #else
     unsigned char output_buf[4096];
     memset(output_buf, 0, 4096);
 #endif
 
     size_t len = 0;
-
 
     if( ( ret = mbedtls_x509write_crt_pem( crt, output_buf, sizeof(output_buf),
                                            f_rng, p_rng ) ) < 0 )
@@ -399,6 +401,8 @@ int main( int argc, char *argv[] )
                 opt.md = MBEDTLS_MD_MD4;
             else if( strcmp( q, "MD5" ) == 0 )
                 opt.md = MBEDTLS_MD_MD5;
+            else if( strcmp( q, "SHAKE256" ) == 0 )
+                opt.md = MBEDTLS_MD_SHAKE256;
             else
             {
                 mbedtls_printf( "Invalid argument for option %s\n", p );

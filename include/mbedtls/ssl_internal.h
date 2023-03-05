@@ -323,6 +323,9 @@ struct mbedtls_ssl_sig_hash_set_t
 #if defined(MBEDTLS_SSL_SPHINCS)
 	mbedtls_md_type_t sphincs;
 #endif /* MBEDTLS_SSL_SPHINCS */
+#if defined(MBEDTLS_SSL_DILITHIUM)
+	mbedtls_md_type_t dilithium;
+#endif /* MBEDTLS_SSL_DILITHIUM */
 };
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 &&
           MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
@@ -348,6 +351,9 @@ struct mbedtls_ssl_handshake_params
 #endif
 #if defined(MBEDTLS_KYBER_C)
 	mbedtls_kyber_context kyber_ctx;              /*!<  KYBER key exchange       */
+#endif
+#if defined(MBEDTLS_SABER_C)
+	mbedtls_saber_context saber_ctx;              /*!<  SABER key exchange       */
 #endif
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     mbedtls_ecjpake_context ecjpake_ctx;        /*!< EC J-PAKE key exchange */

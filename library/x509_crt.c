@@ -145,6 +145,7 @@ const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_next =
     /* Hashes from SHA-256 and above */
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA384 ) |
+    MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHAKE256 ) |
     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA512 ),
     0xFFFFFFF, /* Any PK alg    */
 #if defined(MBEDTLS_ECP_C)
@@ -253,6 +254,16 @@ static int x509_profile_check_key( const mbedtls_x509_crt_profile *profile,
 
 #if defined(MBEDTLS_SPHINCS_C)
 	if (pk_alg == MBEDTLS_PK_SPHINCS)
+	{
+		if (mbedtls_pk_get_bitlen(pk) >= 0)
+			return( 0 );
+		
+		return( -1 );
+	}
+#endif
+
+#if defined(MBEDTLS_DILITHIUM_C)
+	if (pk_alg == MBEDTLS_PK_DILITHIUM)
 	{
 		if (mbedtls_pk_get_bitlen(pk) >= 0)
 			return( 0 );
@@ -1936,14 +1947,12 @@ static int x509_crt_check_signature( const mbedtls_x509_crt *child,
 {
     const mbedtls_md_info_t *md_info;
     unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-
     md_info = mbedtls_md_info_from_type( child->sig_md );
     if( mbedtls_md( md_info, child->tbs.p, child->tbs.len, hash ) != 0 )
     {
         /* Note: this can't happen except after an internal error */
         return( -1 );
     }
-
     /* Skip expensive computation on obvious mismatch */
     if( ! mbedtls_pk_can_do( &parent->pk, child->sig_pk ) )
         return( -1 );
@@ -1975,14 +1984,12 @@ static int x509_crt_check_parent( const mbedtls_x509_crt *child,
                                   int top )
 {
     int need_ca_bit;
-
     /* Parent must be the issuer */
     if( x509_name_cmp( &child->issuer, &parent->subject ) != 0 )
         return( -1 );
 
     /* Parent must have the basicConstraints CA bit set as a general rule */
     need_ca_bit = 1;
-
     /* Exception: v1/v2 certificates that are locally trusted. */
     if( top && parent->version < 3 )
         need_ca_bit = 0;
@@ -2179,7 +2186,6 @@ static int x509_crt_find_parent(
 {
     int ret;
     mbedtls_x509_crt *search_list;
-
     *parent_is_trusted = 1;
 
 #if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
@@ -2190,7 +2196,7 @@ static int x509_crt_find_parent(
         rs_ctx->parent_is_trusted = -1;
     }
 #endif
-
+    
     while( 1 ) {
         search_list = *parent_is_trusted ? trust_ca : child->next;
 

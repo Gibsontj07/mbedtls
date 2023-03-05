@@ -99,7 +99,9 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
 
   return -fail;
 }
-
+/**
+* Generates a public key and a TLS ServerKeyExchange payload.
+*/
 int mbedtls_kyber_make_params(mbedtls_kyber_context *ctx, size_t *olen,
 	unsigned char *buf, size_t blen,
 	int(*f_rng)(void *, unsigned char *, size_t),
@@ -132,12 +134,15 @@ int mbedtls_kyber_make_params(mbedtls_kyber_context *ctx, size_t *olen,
 	return(0);
 }
 
+/*
+* Reads a ServerKeyExhange payload. 
+*/
+
 int mbedtls_kyber_read_params(mbedtls_kyber_context *ctx,
 	const unsigned char **buf, const unsigned char *end)
 {
 	int ret;
 	size_t len;
-
 	if (ctx == NULL)
 		return(MBEDTLS_ERR_KYBER_BAD_INPUT_DATA);
 
@@ -157,6 +162,10 @@ int mbedtls_kyber_read_params(mbedtls_kyber_context *ctx,
 	return (0);
 }
 
+/**
+* Generates a TLS ClientKeyExchange payload.
+*/
+
 int mbedtls_kyber_make_public(mbedtls_kyber_context *ctx, size_t *olen,
 	unsigned char *buf, size_t blen,
 	int(*f_rng)(void *, unsigned char *, size_t),
@@ -172,6 +181,10 @@ int mbedtls_kyber_make_public(mbedtls_kyber_context *ctx, size_t *olen,
 
 	return (0);
 }
+
+/**
+* Reads a TLS ClientKeyExchange payload.
+*/
 
 int mbedtls_kyber_read_public(mbedtls_kyber_context *ctx,
 	const unsigned char *buf, size_t blen)

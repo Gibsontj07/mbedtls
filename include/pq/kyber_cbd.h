@@ -1,5 +1,5 @@
-#ifndef CBD_H
-#define CBD_H
+#ifndef KYBER_CBD_H
+#define KYBER_CBD_H
 
 #include <stdint.h>
 #include "pq/kyber_poly.h"

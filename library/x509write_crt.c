@@ -389,8 +389,11 @@ int mbedtls_x509write_crt_der( mbedtls_x509write_cert *ctx,
     size_t sig_oid_len = 0;
     unsigned char *c, *c2;
     unsigned char hash[64];
+
 #if defined(MBEDTLS_SPHINCS_C)
     unsigned char sig[MBEDTLS_SPHINCS_MAX_SIZE];
+#elif defined(MBEDTLS_DILITHIUM_C)
+    unsigned char sig[100000];
 #else
     unsigned char sig[SIGNATURE_MAX_SIZE];
 #endif
@@ -415,9 +418,16 @@ int mbedtls_x509write_crt_der( mbedtls_x509write_cert *ctx,
 	else if (mbedtls_pk_can_do(ctx->issuer_key, MBEDTLS_PK_SPHINCS))
 		pk_alg = MBEDTLS_PK_SPHINCS;
 #endif /* MBEDTLS_SPHINCS_C */
+
+#if defined(MBEDTLS_DILITHIUM_C)
+    else if (mbedtls_pk_can_do(ctx->issuer_key, MBEDTLS_PK_DILITHIUM)){
+        pk_alg = MBEDTLS_PK_DILITHIUM;
+    }
+#endif /* MBEDTLS_DILITHIUM_C */
+
 	else
         return( MBEDTLS_ERR_X509_INVALID_ALG );
-
+    
     if( ( ret = mbedtls_oid_get_oid_by_sig_alg( pk_alg, ctx->md_alg,
                                           &sig_oid, &sig_oid_len ) ) != 0 )
     {

@@ -207,7 +207,7 @@ static int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
     size_t sig_alg_len = 0;
     const int *md;
 
-#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECDSA_C)
+#if defined(MBEDTLS_RSA_C) || defined(MBEDTLS_ECDSA_C) || defined(MBEDTLS_DILITHIUM_C)
     unsigned char *sig_alg_list = buf + 6;
 #endif
 
@@ -265,6 +265,10 @@ static int ssl_write_signature_algorithms_ext( mbedtls_ssl_context *ssl,
 	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_SIG_SPHINCS;
 	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_HASH_SHAKE256;
 	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_SIG_SPHINCS;
+#endif
+#if defined(MBEDTLS_DILITHIUM_C)
+	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_HASH_SHAKE256;
+	sig_alg_list[sig_alg_len++] = MBEDTLS_SSL_SIG_DILITHIUM;
 #endif
     /*
      * enum {
@@ -2260,7 +2264,8 @@ static int ssl_parse_server_dh_params( mbedtls_ssl_context *ssl,
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||                      \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) ||					   \
-	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) ||					   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED)
 static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
 {
     const mbedtls_ecp_curve_info *curve_info;
@@ -2298,12 +2303,14 @@ static int ssl_check_server_ecdh_params( const mbedtls_ssl_context *ssl )
           MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED ||
-		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||					   \
-	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) ||					   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED)
 static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
                                          unsigned char **p,
                                          unsigned char *end )
@@ -2341,7 +2348,8 @@ static int ssl_parse_server_ecdh_params( mbedtls_ssl_context *ssl,
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED 	||
-		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED */
 
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 static int ssl_parse_server_psk_hint( mbedtls_ssl_context *ssl,
@@ -2468,7 +2476,11 @@ static int ssl_write_encrypted_pms( mbedtls_ssl_context *ssl,
 #if defined(MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED) ||                       \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                     \
-    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)||                     \
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED)||                     \
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED)||                     \
+    defined(MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED)||                     \
+    defined(MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED)
 static int ssl_parse_signature_algorithm( mbedtls_ssl_context *ssl,
                                           unsigned char **p,
                                           unsigned char *end,
@@ -2487,7 +2499,6 @@ static int ssl_parse_signature_algorithm( mbedtls_ssl_context *ssl,
 
     if( (*p) + 2 > end )
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE );
-
     /*
      * Get hash algorithm
      */
@@ -2723,12 +2734,16 @@ start_processing:
 #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED) ||                     \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||				   \
-	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) ||				   \
+	defined(MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_RSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_PSK ||
 #if defined(MBEDTLS_SSL_SPHINCS)
 		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS ||
 #endif /* MBEDTLS_SSL_SPHINCS */
+#if defined(MBEDTLS_SSL_DILITHIUM)
+		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM ||
+#endif /* MBEDTLS_SSL_DILITHIUM */
 		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA )
     {
         if( ssl_parse_server_ecdh_params( ssl, &p, end ) != 0 )
@@ -2745,12 +2760,16 @@ start_processing:
 #endif /* MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED ||
           MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED ||
-		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED */
+		  MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED ||
+          MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED*/
 #if defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)	||	\
-    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED) ||  \
+    defined(MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED)
 		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS  ||
-			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA)
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA    ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM)
 		{
+
 			if (mbedtls_kyber_read_params(&ssl->handshake->kyber_ctx, &p, end) != 0)
 			{
 				MBEDTLS_SSL_DEBUG_MSG(1, ("bad server key exchange message"));
@@ -2761,7 +2780,28 @@ start_processing:
 	}
 		else
 #endif /* MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED	||
-		  MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED */
+		  MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED ||
+          MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED*/
+#if defined(MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED)	||	\
+    defined(MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED) ||  \
+    defined(MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED)
+		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS  ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_SABER_ECDSA    ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM)
+		{
+
+			if (mbedtls_saber_read_params(&ssl->handshake->saber_ctx, &p, end) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_MSG(1, ("bad server key exchange message"));
+				mbedtls_ssl_send_alert_message(ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+					MBEDTLS_SSL_ALERT_MSG_ILLEGAL_PARAMETER);
+				return(MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE);
+		}
+	}
+		else
+#endif /* MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED	||
+		  MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED ||
+          MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED*/
 #if defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECJPAKE )
     {
@@ -3259,12 +3299,14 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED) ||                   \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED) ||                      \
     defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED) ||					   \
-    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS_ENABLED) ||                 \
+    defined(MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM_ENABLED)
     if( ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_RSA ||
         ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA ||
 		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_SPHINCS ||
 		ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_RSA ||
-        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA )
+        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA ||
+        ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_ECDHE_DILITHIUM  )
     {
         /*
          * ECDH key exchange -- send client public value
@@ -3335,9 +3377,11 @@ ecdh_calc_secret:
           MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED ||
 		  MBEDTLS_KEY_EXCHANGE_ECDH_SPHINCS_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED)	||	\
-	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED) ||	\
+	defined(MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED)
 		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS ||
-			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA)
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA   ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM)
 		{
 			/*
 			* KYBER key exchange -- send client public value
@@ -3377,7 +3421,55 @@ ecdh_calc_secret:
 		}
 		else
 #endif /* MBEDTLS_KEY_EXCHANGE_KYBER_ECDSA_ENABLED ||
-		  MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED */
+		  MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED */
+#if defined(MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED)	||	\
+	defined(MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED) ||	\
+	defined(MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED)
+		if (ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_SABER_ECDSA   ||
+			ciphersuite_info->key_exchange == MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM)
+		{
+			/*
+			* SABER key exchange -- send client public value
+			*/
+			i = 4;
+
+			CRYPTOTIME_START
+			ret = mbedtls_saber_make_public(&ssl->handshake->saber_ctx,
+				&n,
+				&ssl->out_msg[i], 1000,
+				ssl->conf->f_rng, ssl->conf->p_rng);
+
+			if (ret != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_saber_make_public", ret);
+				return(ret);
+			}
+
+			//MBEDTLS_SSL_DEBUG_MPI(3, "SABER: ct  ", &ssl->handshake->saber_ctx.key.ct);
+
+			if ((ret = mbedtls_saber_calc_secret(&ssl->handshake->saber_ctx,
+				&ssl->handshake->pmslen,
+				ssl->handshake->premaster,
+				MBEDTLS_MPI_MAX_SIZE)) != 0)
+			{
+				MBEDTLS_SSL_DEBUG_RET(1, "mbedtls_saber_calc_secret", ret);
+				return(ret);
+			}
+			CRYPTOTIME_STOP
+#if defined(MBEDTLS_PEFORMANCE)
+			ssl->performance->kyber_enc = cryptotime;
+#endif
+      //MBEDTLS_SSL_DEBUG_MSG( 0, ( "Shared Secret in µs. %i",  time/1000) );
+
+			MBEDTLS_SSL_DEBUG_MPI(3, "SABER: pk  ", &ssl->handshake->saber_ctx.key.pk_poly);
+			MBEDTLS_SSL_DEBUG_MPI(3, "SABER: ss  ", &ssl->handshake->saber_ctx.key.ss);
+		}
+		else
+#endif /* MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED ||
+		  MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED */
 #if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
     if( mbedtls_ssl_ciphersuite_uses_psk( ciphersuite_info ) )
     {
@@ -3553,7 +3645,10 @@ ecdh_calc_secret:
     !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED) && \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED)&& \
     !defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)&& \
-    !defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)
+    !defined(MBEDTLS_KEY_EXCHANGE_KYBER_SPHINCS_ENABLED)&& \
+    !defined(MBEDTLS_KEY_EXCHANGE_KYBER_DILITHIUM_ENABLED)&& \
+    !defined(MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED)&& \
+    !defined(MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED)
 static int ssl_write_certificate_verify( mbedtls_ssl_context *ssl )
 {
     const mbedtls_ssl_ciphersuite_t *ciphersuite_info =

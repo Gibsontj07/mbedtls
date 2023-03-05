@@ -1,5 +1,5 @@
-#ifndef POLY_H
-#define POLY_H
+#ifndef KYBER_POLY_H
+#define KYBER_POLY_H
 
 #include <stdint.h>
 #include "pq/kyber_params.h"

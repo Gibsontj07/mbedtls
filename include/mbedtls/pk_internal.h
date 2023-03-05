@@ -51,12 +51,12 @@
 #define MBEDTLS_PK_WRAP_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#include "pk.h"
+#include "mbedtls/pk.h"
 
 struct mbedtls_pk_info_t
 {
@@ -160,8 +160,16 @@ extern const mbedtls_pk_info_t mbedtls_ecdsa_info;
 extern const mbedtls_pk_info_t mbedtls_sphincs_info;
 #endif
 
+#if defined(MBEDTLS_DILITHIUM_C)
+extern const mbedtls_pk_info_t mbedtls_dilithium_info;
+#endif
+
 #if defined(MBEDTLS_KYBER_C)
 extern const mbedtls_pk_info_t mbedtls_kyber_info;
+#endif
+
+#if defined(MBEDTLS_SABER_C)
+extern const mbedtls_pk_info_t mbedtls_saber_info;
 #endif
 
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)

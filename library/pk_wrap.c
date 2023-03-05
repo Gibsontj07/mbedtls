@@ -52,7 +52,7 @@
 
 #if defined(MBEDTLS_PK_C)
 #include "mbedtls/pk_internal.h"
-
+//#endif
 /* Even if RSA not activated, for the sake of RSA-alt */
 #include "mbedtls/rsa.h"
 
@@ -492,6 +492,7 @@ const mbedtls_pk_info_t mbedtls_eckeydh_info = {
 #endif /* MBEDTLS_ECP_C */
 
 #if defined(MBEDTLS_KYBER_C)
+//#include "/home/bb/pico/pico-sdk/lib/mbedtls/include/pq/kyber.h"
 static size_t kyber_get_bitlen(const void *ctx)
 {
 	return(((mbedtls_kyber_context *)ctx)->key.bitlen);
@@ -567,6 +568,81 @@ const mbedtls_pk_info_t mbedtls_kyber_info = {
 	kyber_debug,            
 };
 #endif /* MBEDTLS_KYBER_C */
+
+
+#if defined(MBEDTLS_SABER_C)
+ static size_t saber_get_bitlen(const void *ctx)
+ {
+     return(((mbedtls_saber_context *)ctx)->key.bitlen);
+ }
+ static int saber_check_pair(const void *pub, const void *prv)
+ {
+     return(mbedtls_saber_check_pub_priv(
+         (const mbedtls_saber_context *)pub,
+         (const mbedtls_saber_context *)prv));
+ }
+ static void *saber_alloc_wrap(void)
+ {
+     void *ctx = mbedtls_calloc(1, sizeof(mbedtls_saber_context));
+     if (ctx != NULL)
+         mbedtls_saber_init(ctx);
+
+     return(ctx);
+ }
+
+ static void saber_free_wrap(void *ctx)
+ {
+     mbedtls_saber_free((mbedtls_saber_context *)ctx);
+     mbedtls_free(ctx);
+ }
+
+ static void saber_debug(const void *ctx, mbedtls_pk_debug_item *items)
+ {
+     items->type = MBEDTLS_PK_DEBUG_MPI;
+     items->name = "pk.Polynomial";
+     items->value = &(((mbedtls_saber_context *)ctx)->key.sk_poly);
+
+     items++;
+
+     items->type = MBEDTLS_PK_DEBUG_NONE;
+     items->name = "pk.Hash";
+     items->value = &(((mbedtls_saber_context *)ctx)->key.pk_hash);
+
+     items++;
+
+     items->type = MBEDTLS_PK_DEBUG_NONE;
+     items->name = "pk.Seed";
+     items->value = &(((mbedtls_saber_context *)ctx)->key.pk_seed);
+ }
+
+ static int saber_can_do(mbedtls_pk_type_t type)
+ {
+     return(type == MBEDTLS_PK_SABER);
+ }
+
+ const mbedtls_pk_info_t mbedtls_saber_info = {
+     MBEDTLS_PK_SABER,
+     "SABER",
+     saber_get_bitlen,        
+     saber_can_do,
+     NULL,
+     NULL,
+ #if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+     NULL,
+     NULL,
+ #endif
+     NULL,
+     NULL,
+     saber_check_pair,
+     saber_alloc_wrap,       
+     saber_free_wrap, 
+ #if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+     NULL,
+     NULL,
+ #endif       
+     saber_debug,            
+ };
+ #endif /* MBEDTLS_SABER_C */
 
 #if defined(MBEDTLS_ECDSA_C)
 static int ecdsa_can_do( mbedtls_pk_type_t type )
@@ -782,6 +858,106 @@ const mbedtls_pk_info_t mbedtls_sphincs_info = {
 	sphincs_debug,
 };
 #endif /* MBEDTLS_SPHINCS_C */
+
+#if defined(MBEDTLS_DILITHIUM_C)
+static size_t dilithium_get_bitlen(const void *ctx)
+{
+    //return(sizeof(((mbedtls_dilithium_context *)ctx)->pk));
+    return(((mbedtls_dilithium_context *)ctx)->key.bitlen);
+}
+
+static int dilithium_can_do(mbedtls_pk_type_t type)
+{
+    return(type == MBEDTLS_PK_DILITHIUM);
+}
+
+
+static int dilithium_verify_wrap(void *ctx, mbedtls_md_type_t md_alg,
+    const unsigned char *hash, size_t hash_len,
+    const unsigned char *sig, size_t sig_len)
+{
+    ((void)md_alg);
+
+    return mbedtls_dilithium_read_signature((mbedtls_dilithium_context *)ctx,
+        hash, hash_len, sig, sig_len);
+}
+
+static int dilithium_sign_wrap(void *ctx, mbedtls_md_type_t md_alg,
+    const unsigned char *hash, size_t hash_len,
+    unsigned char *sig, size_t *sig_len,
+    int(*f_rng)(void *, unsigned char *, size_t), void *p_rng)
+{
+    ((void)md_alg);
+
+    return(mbedtls_dilithium_write_signature((mbedtls_dilithium_context *)ctx,
+        hash, hash_len, sig, sig_len, f_rng, p_rng));
+}
+
+static int dilithium_check_pair(const void *pub, const void *prv)
+{
+    //return(memcmp(((const mbedtls_dilithium_context *)pub)->pk, 
+      //  ((const mbedtls_dilithium_context *)prv)->pk,
+        //mbedtls_dilithium_get_len((const mbedtls_dilithium_context *)pub)));
+    
+    return(mbedtls_dilithium_check_pub_priv(
+    (const mbedtls_dilithium_context *)pub,
+    (const mbedtls_dilithium_context *)prv));
+}
+
+static void *dilithium_alloc_wrap(void)
+{
+    void *ctx = mbedtls_calloc(1, sizeof(mbedtls_dilithium_context));
+
+    if (ctx != NULL)
+        mbedtls_dilithium_init((mbedtls_dilithium_context *)ctx);
+
+    return(ctx);
+}
+
+static void dilithium_free_wrap(void *ctx)
+{
+    mbedtls_dilithium_free((mbedtls_dilithium_context *)ctx);
+    mbedtls_free(ctx);
+}
+
+static void dilithium_debug(const void *ctx, mbedtls_pk_debug_item *items)
+{
+    items->type = MBEDTLS_PK_DEBUG_MPI;
+    items->name = "pk_rho";
+    items->value = &(((mbedtls_dilithium_context *)ctx)->key.pk_rho);
+
+    items++;
+
+    items->type = MBEDTLS_PK_DEBUG_MPI;
+    items->name = "pk_t1";
+    items->value = &(((mbedtls_dilithium_context *)ctx)->key.pk_t1);
+}
+
+const mbedtls_pk_info_t mbedtls_dilithium_info = {
+    MBEDTLS_PK_DILITHIUM,
+    "DILITHIUM",
+    dilithium_get_bitlen,    
+    dilithium_can_do,
+    dilithium_verify_wrap,
+    dilithium_sign_wrap,
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    NULL,
+    NULL,
+#endif
+    NULL,
+    NULL,
+    dilithium_check_pair,  
+    dilithium_alloc_wrap,
+    dilithium_free_wrap,
+#if defined(MBEDTLS_ECDSA_C) && defined(MBEDTLS_ECP_RESTARTABLE)
+    NULL,
+    NULL,
+#endif
+    dilithium_debug,
+};
+#endif /* MBEDTLS_DILITHIUM_C */ 
+
+
 #if defined(MBEDTLS_PK_RSA_ALT_SUPPORT)
 /*
  * Support for alternative RSA-private implementations

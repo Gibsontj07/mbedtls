@@ -467,7 +467,6 @@ int mbedtls_pem_write_buffer( const char *header, const char *footer,
     int ret;
     unsigned char *encode_buf = NULL, *c, *p = buf;
     size_t len = 0, use_len, add_len = 0;
-
     mbedtls_base64_encode( NULL, 0, &use_len, der_data, der_len );
     add_len = strlen( header ) + strlen( footer ) + ( use_len / 64 ) + 1;
 

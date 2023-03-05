@@ -1,3 +1,4 @@
+#include "pq/kyber_verify.h"
 #include <string.h>
 #include <stdint.h>
 

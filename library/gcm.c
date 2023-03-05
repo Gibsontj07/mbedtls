@@ -309,7 +309,7 @@ int mbedtls_gcm_starts( mbedtls_gcm_context *ctx,
     size_t i;
     const unsigned char *p;
     size_t use_len, olen = 0;
-
+    
     GCM_VALIDATE_RET( ctx != NULL );
     GCM_VALIDATE_RET( iv != NULL );
     GCM_VALIDATE_RET( add_len == 0 || add != NULL );

@@ -1052,8 +1052,7 @@ int main( int argc, char *argv[] )
 		TIME_PUBLIC(title, "handshake",
 			ret |= mbedtls_kyber_make_public(&kyber, &olen, buf, sizeof(buf),
 				myrand, NULL);
-		ret |= mbedtls_kyber_calc_secret(&kyber, &olen, buf, sizeof(buf),
-			myrand, NULL));
+		ret |= mbedtls_kyber_calc_secret(&kyber, &olen, buf, sizeof(buf));
 
 		mbedtls_kyber_free(&kyber);
 	}

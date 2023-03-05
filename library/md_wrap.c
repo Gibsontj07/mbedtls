@@ -86,6 +86,10 @@
 #include "mbedtls/sha512.h"
 #endif
 
+#if defined(MBEDTLS_SHAKE256_C)
+#include "mbedtls/shake256.h"
+#endif
+
 #if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
@@ -612,8 +616,10 @@ const mbedtls_md_info_t mbedtls_sha512_info = {
 const mbedtls_md_info_t mbedtls_shake256_info = {
     MBEDTLS_MD_SHAKE256,
     "SHAKE256",
-    32,
-    64,
+    // 32, 
+    // 64,
+    64, 
+    136,
     sha256_starts_wrap,
     sha224_update_wrap,
     sha224_finish_wrap,

@@ -64,7 +64,7 @@
 #define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
 #endif
 
-#include "mbedtls\timing.h"
+#include "mbedtls/timing.h"
 
 #if !defined(MBEDTLS_BIGNUM_C) ||    \
     !defined(MBEDTLS_ENTROPY_C) || !defined(MBEDTLS_SSL_TLS_C) || \
@@ -108,7 +108,7 @@ int main( void )
     "<h2>mbed TLS Test Server</h2>\r\n" \
     "<p>Successful connection using: %s</p>\r\n"
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 1
 
 
 static void my_debug( void *ctx, int level,
@@ -160,9 +160,10 @@ int main( void )
 
     /*
      * 1. Load the certificates and private RSA key
-     */
+    */
     mbedtls_printf( "\n  . Loading the server cert. and key..." );
     fflush( stdout );
+    
 
     /*
      * This demonstration program uses embedded test certificates.
@@ -194,10 +195,14 @@ int main( void )
     }
 
     mbedtls_printf( " ok\n" );
+    
+    char info_buf[1000];
+    mbedtls_x509_crt_info(info_buf, 1000, ">", &srvcert);
+    printf("\n Cert info:\n%s\n", info_buf);
 
     /*
      * 2. Setup the listening TCP socket
-     */
+    */ 
     mbedtls_printf( "  . Bind on https://localhost:4433/ ..." );
     fflush( stdout );
 
@@ -301,7 +306,7 @@ reset:
     mbedtls_printf( "  . Performing the SSL/TLS handshake..." );
     fflush( stdout );
 	struct mbedtls_timing_hr_time handshaketimer;
-	(void)mbedtls_timing_get_timer(&handshaketimer, 1);
+    (void)mbedtls_timing_get_timer(&handshaketimer, 1);
     while( ( ret = mbedtls_ssl_handshake( &ssl ) ) != 0 )
     {
         if( ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE )
@@ -318,6 +323,7 @@ reset:
 	mbedtls_printf( "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i\n",
         performance.handshake,
         performance.sphincs_sign,
+        performance.dilithium_sign,
         performance.kyber_dec,
         performance.kyber_genkey,
         performance.parse_client_hello,
