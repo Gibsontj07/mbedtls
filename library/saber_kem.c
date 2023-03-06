@@ -99,11 +99,11 @@ int crypto_saber_kem_dec(unsigned char *ss, const unsigned char *ct, const unsig
 
   indcpa_kem_enc(buf, kr+32, pk, cmp);
 
-  fail = verify(ct, cmp, SABER_BYTES_CCA_DEC);
+  fail = saber_verify(ct, cmp, SABER_BYTES_CCA_DEC);
   
   sha3_256(kr+32, ct, SABER_BYTES_CCA_DEC);        		     // overwrite coins in kr with h(c)  
 
-  cmov(kr, sk+SABER_SECRETKEYBYTES-SABER_KEYBYTES, SABER_KEYBYTES, fail); 
+  saber_cmov(kr, sk+SABER_SECRETKEYBYTES-SABER_KEYBYTES, SABER_KEYBYTES, fail); 
 
   sha3_256(ss, kr, 64);                          	   	     // hash concatenation of pre-k and h(c) to k
   return -fail;	

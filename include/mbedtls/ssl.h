@@ -1161,7 +1161,9 @@ struct mbedtls_ssl_context
     mbedtls_ssl_handshake_params *handshake;    /*!<  params required only during
                                               the handshake process        */
 
-#if defined(MBEDTLS_PEFORMANCE)
+#if defined(MBEDTLS_PEFORMANCE) || \
+    defined(MBEDTLS_PICO_LATENCY) || \
+    defined(MBEDTLS_PICO_CYCLES)
     mbedtls_pq_performance* performance;
 #endif  
 

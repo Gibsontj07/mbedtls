@@ -82,6 +82,12 @@ RUNTIME_INIT
 CRYPTOTIME_INIT
 HASH_INIT
 
+/* defined in mbedtls_config.h */
+#if defined(MBEDTLS_PICO_LATENCY)|| \
+    defined(MBEDTLS_PICO_CYCLES)
+#include "pqc-pico/utimer.h"
+#include "pqc-pico/systick.h"
+#endif
 
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
 static int ssl_write_hostname_ext( mbedtls_ssl_context *ssl,
@@ -2971,7 +2977,16 @@ start_processing:
                 MBEDTLS_SSL_ALERT_MSG_HANDSHAKE_FAILURE );
             return( MBEDTLS_ERR_SSL_PK_TYPE_MISMATCH );
         }
-
+#if defined(MBEDTLS_PICO_LATENCY)
+    microsecond_count_t* utp = (microsecond_count_t*) malloc(sizeof(microsecond_count_t));
+    init_utimer(utp);
+    begin_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    init_systick_reg();
+    systick_count_t* stp = (systick_count_t*) malloc(sizeof(systick_count_t));
+    init_systick(stp);
+    begin_systick(stp);
+#endif
         HASH_START
         CRYPTOTIME_START
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
@@ -3002,6 +3017,17 @@ start_processing:
 #if defined(MBEDTLS_PEFORMANCE)
         ssl->performance->sphincs_verify = cryptotime;
         ssl->performance->hashs = hash_calls;
+#endif
+#if defined(MBEDTLS_PICO_LATENCY)
+    end_utimer(utp);
+    double ms_time = (double)(utp->ut_diff)/1000.0;
+    ssl->performance->sphincs_verify = ms_time;
+    free_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    end_systick(stp);
+    double cycles = (double)(stp->st_diff);
+    ssl->performance->sphincs_verify = cycles;
+    free_systick(stp);
 #endif
     }
 #endif /* MBEDTLS_KEY_EXCHANGE__WITH_SERVER_SIGNATURE__ENABLED */
@@ -3313,6 +3339,16 @@ static int ssl_write_client_key_exchange( mbedtls_ssl_context *ssl )
          */
         i = 4;
         CRYPTOTIME_START
+#if defined(MBEDTLS_PICO_LATENCY)
+    microsecond_count_t* utp = (microsecond_count_t*) malloc(sizeof(microsecond_count_t));
+    init_utimer(utp);
+    begin_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    init_systick_reg();
+    systick_count_t* stp = (systick_count_t*) malloc(sizeof(systick_count_t));
+    init_systick(stp);
+    begin_systick(stp);
+#endif
 #if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
         if( ssl->handshake->ecrs_enabled )
         {
@@ -3367,6 +3403,17 @@ ecdh_calc_secret:
 #if defined(MBEDTLS_PEFORMANCE)
         ssl->performance->kyber_enc = cryptotime;
 #endif
+#if defined(MBEDTLS_PICO_LATENCY)
+    end_utimer(utp);
+    double ms_time = (double)(utp->ut_diff)/1000.0;
+    ssl->performance->kyber_enc = ms_time;
+    free_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    end_systick(stp);
+    double cycles = (double)(stp->st_diff);
+    ssl->performance->kyber_enc = cycles;
+    free_systick(stp);
+#endif
         MBEDTLS_SSL_DEBUG_ECDH( 3, &ssl->handshake->ecdh_ctx,
                                 MBEDTLS_DEBUG_ECDH_Z );
     }
@@ -3387,7 +3434,16 @@ ecdh_calc_secret:
 			* KYBER key exchange -- send client public value
 			*/
 			i = 4;
-
+#if defined(MBEDTLS_PICO_LATENCY)
+    microsecond_count_t* utp = (microsecond_count_t*) malloc(sizeof(microsecond_count_t));
+    init_utimer(utp);
+    begin_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    init_systick_reg();
+    systick_count_t* stp = (systick_count_t*) malloc(sizeof(systick_count_t));
+    init_systick(stp);
+    begin_systick(stp);
+#endif
 			CRYPTOTIME_START
 			ret = mbedtls_kyber_make_public(&ssl->handshake->kyber_ctx,
 				&n,
@@ -3414,6 +3470,17 @@ ecdh_calc_secret:
 #if defined(MBEDTLS_PEFORMANCE)
 			ssl->performance->kyber_enc = cryptotime;
 #endif
+#if defined(MBEDTLS_PICO_LATENCY)
+    end_utimer(utp);
+    double ms_time = (double)(utp->ut_diff)/1000.0;
+    ssl->performance->kyber_enc = ms_time;
+    free_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    end_systick(stp);
+    double cycles = (double)(stp->st_diff);
+    ssl->performance->kyber_enc = cycles;
+    free_systick(stp);
+#endif
       //MBEDTLS_SSL_DEBUG_MSG( 0, ( "Shared Secret in µs. %i",  time/1000) );
 
 			MBEDTLS_SSL_DEBUG_MPI(3, "KYBER: pk  ", &ssl->handshake->kyber_ctx.key.pk_poly);
@@ -3434,7 +3501,16 @@ ecdh_calc_secret:
 			* SABER key exchange -- send client public value
 			*/
 			i = 4;
-
+#if defined(MBEDTLS_PICO_LATENCY)
+    microsecond_count_t* utp = (microsecond_count_t*) malloc(sizeof(microsecond_count_t));
+    init_utimer(utp);
+    begin_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    init_systick_reg();
+    systick_count_t* stp = (systick_count_t*) malloc(sizeof(systick_count_t));
+    init_systick(stp);
+    begin_systick(stp);
+#endif
 			CRYPTOTIME_START
 			ret = mbedtls_saber_make_public(&ssl->handshake->saber_ctx,
 				&n,
@@ -3460,6 +3536,17 @@ ecdh_calc_secret:
 			CRYPTOTIME_STOP
 #if defined(MBEDTLS_PEFORMANCE)
 			ssl->performance->kyber_enc = cryptotime;
+#endif
+#if defined(MBEDTLS_PICO_LATENCY)
+    end_utimer(utp);
+    double ms_time = (double)(utp->ut_diff)/1000.0;
+    ssl->performance->kyber_enc = ms_time;
+    free_utimer(utp);
+#elif defined(MBEDTLS_PICO_CYCLES)
+    end_systick(stp);
+    double cycles = (double)(stp->st_diff);
+    ssl->performance->kyber_enc = cycles;
+    free_systick(stp);
 #endif
       //MBEDTLS_SSL_DEBUG_MSG( 0, ( "Shared Secret in µs. %i",  time/1000) );
 
@@ -4165,4 +4252,5 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
 
     return( ret );
 }
+
 #endif /* MBEDTLS_SSL_CLI_C */
