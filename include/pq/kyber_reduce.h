@@ -1,12 +1,14 @@
-#ifndef REDUCE_H
-#define REDUCE_H
+#ifndef KYBER_REDUCE_H
+#define KYBER_REDUCE_H
 
+#include "pq/kyber_params.h"
 #include <stdint.h>
 
-uint16_t freeze(uint16_t x);
+#define MONT (-1044) // 2^16 mod q
+#define QINV (-3327) // q^-1 mod 2^16
 
-uint16_t montgomery_reduce(uint32_t a);
+int16_t montgomery_reduce(int32_t a);
 
-uint16_t barrett_reduce(uint16_t a);
+int16_t barrett_reduce(int16_t a);
 
 #endif

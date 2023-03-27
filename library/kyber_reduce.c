@@ -1,73 +1,41 @@
-#include "pq/kyber_reduce.h"
 #include "pq/kyber_params.h"
-
-
-static const uint32_t qinv = 7679; // -inverse_mod(q,2^18)
-static const uint32_t rlog = 18;
+#include "pq/kyber_reduce.h"
+#include <stdint.h>
 
 /*************************************************
 * Name:        montgomery_reduce
-* 
-* Description: Montgomery reduction; given a 32-bit integer a, computes
-*              16-bit integer congruent to a * R^-1 mod q, 
-*              where R=2^18 (see value of rlog)
 *
-* Arguments:   - uint32_t a: input unsigned integer to be reduced; has to be in {0,...,2281446912}
-*              
-* Returns:     unsigned integer in {0,...,2^13-1} congruent to a * R^-1 modulo q.
+* Description: Montgomery reduction; given a 32-bit integer a, computes
+*              16-bit integer congruent to a * R^-1 mod q, where R=2^16
+*
+* Arguments:   - int32_t a: input integer to be reduced;
+*                           has to be in {-q2^15,...,q2^15-1}
+*
+* Returns:     integer in {-q+1,...,q-1} congruent to a * R^-1 modulo q.
 **************************************************/
-uint16_t montgomery_reduce(uint32_t a)
-{
-  uint32_t u;
+int16_t montgomery_reduce(int32_t a) {
+    int16_t t;
 
-  u = (a * qinv);
-  u &= ((1<<rlog)-1);
-  u *= KYBER_Q;
-  a = a + u;
-  return a >> rlog;
+    t = (int16_t)a * QINV;
+    t = (a - (int32_t)t * KYBER_Q) >> 16;
+    return t;
 }
-
 
 /*************************************************
 * Name:        barrett_reduce
-* 
+*
 * Description: Barrett reduction; given a 16-bit integer a, computes
-*              16-bit integer congruent to a mod q in {0,...,11768}
+*              centered representative congruent to a mod q in {-(q-1)/2,...,(q-1)/2}
 *
-* Arguments:   - uint16_t a: input unsigned integer to be reduced
-*              
-* Returns:     unsigned integer in {0,...,11768} congruent to a modulo q.
-**************************************************/
-uint16_t barrett_reduce(uint16_t a)
-{
-  uint32_t u;
-
-  u = a >> 13;//((uint32_t) a * sinv) >> 16;
-  u *= KYBER_Q;
-  a -= u;
-  return a;
-}
-
-/*************************************************
-* Name:        freeze
-* 
-* Description: Full reduction; given a 16-bit integer a, computes
-*              unsigned integer a mod q.
+* Arguments:   - int16_t a: input integer to be reduced
 *
-* Arguments:   - uint16_t x: input unsigned integer to be reduced
-*              
-* Returns:     unsigned integer in {0,...,q-1} congruent to a modulo q.
+* Returns:     integer in {-(q-1)/2,...,(q-1)/2} congruent to a modulo q.
 **************************************************/
-uint16_t freeze(uint16_t x)
-{
-  uint16_t m,r;
-  int16_t c;
-  r = barrett_reduce(x);
+int16_t barrett_reduce(int16_t a) {
+    int16_t t;
+    const int16_t v = ((1 << 26) + KYBER_Q / 2) / KYBER_Q;
 
-  m = r - KYBER_Q;
-  c = m;
-  c >>= 15; 
-  r = m ^ ((r^m)&c); 
-
-  return r;
+    t  = ((int32_t)v * a + (1 << 25)) >> 26;
+    t *= KYBER_Q;
+    return a - t;
 }

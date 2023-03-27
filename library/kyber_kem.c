@@ -1,8 +1,13 @@
-#include "pq/kyber.h"
-#include "pq/fips202.h"
-#include "pq/kyber_params.h"
-#include "pq/kyber_verify.h"
 #include "pq/kyber_indcpa.h"
+#include "pq/kyber_kem.h"
+#include "pq/kyber_params.h"
+//#include "pq/fips202.h"
+#include "pq/kyber_symmetric.h"
+#include "pq/kyber_verify.h"
+#include <stddef.h>
+#include <stdint.h>
+
+
 
 /*************************************************
 * Name:        crypto_kem_keypair
@@ -22,7 +27,7 @@ int crypto_kem_keypair(unsigned char *pk, unsigned char *sk,
   indcpa_keypair(pk, sk, f_rng, p_rng);
   for(i=0;i<KYBER_INDCPA_PUBLICKEYBYTES;i++)
     sk[i+KYBER_INDCPA_SECRETKEYBYTES] = pk[i];
-  sha3_256(sk+KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES,pk,KYBER_PUBLICKEYBYTES);
+  hash_h(sk+KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES,pk,KYBER_PUBLICKEYBYTES);
   f_rng(p_rng, sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES);         /* Value z for pseudo-random output on reject */
   return 0;
 }
@@ -54,7 +59,8 @@ int crypto_kem_enc(unsigned char *ct, unsigned char *ss, const unsigned char *pk
   indcpa_enc(ct, buf, pk, kr+KYBER_SYMBYTES);                                 /* coins are in kr+KYBER_SYMBYTES */
 
   sha3_256(kr+KYBER_SYMBYTES, ct, KYBER_CIPHERTEXTBYTES);                     /* overwrite coins in kr with H(c) */
-  sha3_256(ss, kr, 2*KYBER_SYMBYTES);                                         /* hash concatenation of pre-k and H(c) to k */
+  shake256(ss, KYBER_SSBYTES, kr, 2*KYBER_SYMBYTES); /*NEW*/
+  //sha3_256(ss, kr, 2*KYBER_SYMBYTES);   /*OLD*/                                     /* hash concatenation of pre-k and H(c) to k */
   return 0;
 }
 
@@ -93,9 +99,10 @@ int crypto_kem_dec(unsigned char *ss, const unsigned char *ct, const unsigned ch
 
   sha3_256(kr+KYBER_SYMBYTES, ct, KYBER_CIPHERTEXTBYTES);                     /* overwrite coins in kr with H(c)  */
 
-  cmov(kr, sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES, fail);     /* Overwrite pre-k with z on re-encryption failure */
+  cmov(kr, sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES, (uint8_t)fail);   /* Overwrite pre-k with z on re-encryption failure */
 
-  sha3_256(ss, kr, 2*KYBER_SYMBYTES);                                         /* hash concatenation of pre-k and H(c) to k */
+  shake256(ss, KYBER_SSBYTES, kr, 2 * KYBER_SYMBYTES);
+  //sha3_256(ss, kr, 2*KYBER_SYMBYTES);  /*OLD*/                                       /* hash concatenation of pre-k and H(c) to k */
 
   return -fail;
 }
@@ -117,14 +124,14 @@ int mbedtls_kyber_make_params(mbedtls_kyber_context *ctx, size_t *olen,
 		!= 0)
 		return(ret);
 
-	if ((KYBER_POLYVECCOMPRESSEDBYTES + sizeof(&ctx->key.pk_hash) + sizeof(&ctx->key.pk_seed)) > blen)
+	if ((KYBER_POLYVECBYTES + sizeof(&ctx->key.pk_hash) + sizeof(&ctx->key.pk_seed)) > blen)
 	{
 		return (MBEDTLS_ERR_KYBER_BUFFER_TOO_SMALL);
 	}
 
 	len = 0;
-	mbedtls_mpi_write_binary(&ctx->key.pk_poly, buf, KYBER_POLYVECCOMPRESSEDBYTES);
-	len += KYBER_POLYVECCOMPRESSEDBYTES;
+	mbedtls_mpi_write_binary(&ctx->key.pk_poly, buf, KYBER_POLYVECBYTES);
+	len += KYBER_POLYVECBYTES;
 	memcpy(buf + len, &ctx->key.pk_hash, KYBER_SYMBYTES);
 	len += KYBER_SYMBYTES;
 	memcpy(buf + len, &ctx->key.pk_seed, KYBER_SYMBYTES);
@@ -146,14 +153,14 @@ int mbedtls_kyber_read_params(mbedtls_kyber_context *ctx,
 	if (ctx == NULL)
 		return(MBEDTLS_ERR_KYBER_BAD_INPUT_DATA);
 
-	if ((KYBER_POLYVECCOMPRESSEDBYTES + sizeof(&ctx->key.pk_hash) + sizeof(&ctx->key.pk_seed)) > (end - *buf))
+	if ((KYBER_POLYVECBYTES + sizeof(&ctx->key.pk_hash) + sizeof(&ctx->key.pk_seed)) > (end - *buf))
 	{
 		return (MBEDTLS_ERR_KYBER_BAD_INPUT_DATA);
 	}
 
 	len = 0;
-	mbedtls_mpi_read_binary(&ctx->key.pk_poly, *buf, KYBER_POLYVECCOMPRESSEDBYTES);
-	(*buf) += KYBER_POLYVECCOMPRESSEDBYTES;
+	mbedtls_mpi_read_binary(&ctx->key.pk_poly, *buf, KYBER_POLYVECBYTES);
+	(*buf) += KYBER_POLYVECBYTES;
 	memcpy(&ctx->key.pk_hash, (*buf), KYBER_SYMBYTES);
 	(*buf) += KYBER_SYMBYTES;
 	memcpy(&ctx->key.pk_seed, (*buf), KYBER_SYMBYTES);
@@ -233,9 +240,9 @@ int mbedtls_kyber_genkey(mbedtls_kyber_context *ctx,
 
 	mbedtls_mpi_read_binary(&ctx->key.sk_poly, sk, KYBER_INDCPA_SECRETKEYBYTES);
 	memcpy(&ctx->key.sk_seed, sk + (KYBER_SECRETKEYBYTES - KYBER_SYMBYTES), KYBER_SYMBYTES);
-	mbedtls_mpi_read_binary(&ctx->key.pk_poly, pk, KYBER_POLYVECCOMPRESSEDBYTES);
+	mbedtls_mpi_read_binary(&ctx->key.pk_poly, pk, KYBER_POLYVECBYTES);
 	memcpy(&ctx->key.pk_hash, sk + KYBER_SECRETKEYBYTES - (2 * KYBER_SYMBYTES), KYBER_SYMBYTES);
-	memcpy(&ctx->key.pk_seed, pk + KYBER_POLYVECCOMPRESSEDBYTES, KYBER_SYMBYTES);
+	memcpy(&ctx->key.pk_seed, pk + KYBER_POLYVECBYTES, KYBER_SYMBYTES);
 
 	/*
 	printf("Secret Key: \n");
@@ -271,8 +278,8 @@ int mbedtls_kyber_enc(mbedtls_kyber_context *ctx,
 	unsigned char ct[CRYPTO_CIPHERTEXTBYTES];
 	unsigned char pk[CRYPTO_PUBLICKEYBYTES];
 
-	mbedtls_mpi_write_binary(&ctx->key.pk_poly, pk, KYBER_POLYVECCOMPRESSEDBYTES);
-	memcpy(pk + KYBER_POLYVECCOMPRESSEDBYTES, &ctx->key.pk_seed, KYBER_SYMBYTES);
+	mbedtls_mpi_write_binary(&ctx->key.pk_poly, pk, KYBER_POLYVECBYTES);
+	memcpy(pk + KYBER_POLYVECBYTES, &ctx->key.pk_seed, KYBER_SYMBYTES);
 
 	crypto_kem_enc(ct, ss, pk, f_rng, p_rng);
 
@@ -288,8 +295,8 @@ int mbedtls_kyber_dec(mbedtls_kyber_context *ctx)
 	unsigned char sk[CRYPTO_SECRETKEYBYTES];
 
 	mbedtls_mpi_write_binary(&ctx->key.sk_poly, sk, KYBER_INDCPA_SECRETKEYBYTES);
-	mbedtls_mpi_write_binary(&ctx->key.pk_poly, sk + KYBER_INDCPA_SECRETKEYBYTES, KYBER_POLYVECCOMPRESSEDBYTES);
-	memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + KYBER_POLYVECCOMPRESSEDBYTES, &ctx->key.pk_seed, KYBER_SYMBYTES);
+	mbedtls_mpi_write_binary(&ctx->key.pk_poly, sk + KYBER_INDCPA_SECRETKEYBYTES, KYBER_POLYVECBYTES);
+	memcpy(sk + KYBER_INDCPA_SECRETKEYBYTES + KYBER_POLYVECBYTES, &ctx->key.pk_seed, KYBER_SYMBYTES);
 	memcpy(sk + KYBER_SECRETKEYBYTES - (2 * KYBER_SYMBYTES), &ctx->key.pk_hash, KYBER_SYMBYTES);
 	memcpy(sk + KYBER_SECRETKEYBYTES - KYBER_SYMBYTES, &ctx->key.sk_seed, KYBER_SYMBYTES);
 

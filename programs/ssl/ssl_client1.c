@@ -93,7 +93,7 @@ int main( void )
 #define SERVER_PORT "4433"
 #define SERVER_NAME "localhost"
 #define HOSTNAME "Entity Certificate"
-#define SERVER_ADDR "10.9.19.29"
+#define SERVER_ADDR "127.0.0.1"
 
 #define GET_REQUEST "GET / HTTP/1.0\r\n\r\n"
 

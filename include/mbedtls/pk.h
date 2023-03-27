@@ -79,7 +79,7 @@
 #endif
 
 #if defined(MBEDTLS_KYBER_C)
-#include "pq/kyber.h"
+#include "pq/kyber_kem.h"
 #endif
 
 #if defined(MBEDTLS_SABER_C)

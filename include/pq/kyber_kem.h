@@ -1,5 +1,5 @@
-#ifndef KYBER_H
-#define KYBER_H
+#ifndef KYBER_KEM_H
+#define KYBER_KEM_H
 
 #include "pq/kyber_params.h"
 #include "mbedtls/bignum.h"
@@ -16,7 +16,7 @@
 #define CRYPTO_SECRETKEYBYTES  KYBER_SECRETKEYBYTES
 #define CRYPTO_PUBLICKEYBYTES  KYBER_PUBLICKEYBYTES
 #define CRYPTO_CIPHERTEXTBYTES KYBER_CIPHERTEXTBYTES
-#define CRYPTO_BYTES           KYBER_SYMBYTES
+#define CRYPTO_BYTES           KYBER_SSBYTES
 
 // #if   (KYBER_K == 2)
 // #define CRYPTO_ALGNAME "Kyber512"

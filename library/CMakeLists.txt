@@ -52,8 +52,9 @@ set(src_crypto
     kyber_ntt.c
     kyber_poly.c
     kyber_polyvec.c
-    kyber_precomp.c
+    #kyber_precomp.c
     kyber_reduce.c
+    kyber_symmetric-shake.c
     kyber_verify.c
     md.c
     md2.c
@@ -237,7 +238,7 @@ if(USE_SHARED_MBEDTLS_LIBRARY)
     #set_target_properties(ssl PROPERTIES VERSION 2.16.7 SOVERSION 3)
     #target_link_libraries(ssl ${libs})
 
-    install(TARGETS mbedtls mbedx509 mbedcrypto crypto #ssl
+    install(TARGETS mbedtls mbedx509 mbedcrypto #crypto #ssl
             DESTINATION ${LIB_INSTALL_DIR}
             PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif(USE_SHARED_MBEDTLS_LIBRARY)
