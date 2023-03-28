@@ -41,3 +41,6 @@ massif-*
 /GTAGS
 /TAGS
 /tags
+
+# Build Directory
+/build
