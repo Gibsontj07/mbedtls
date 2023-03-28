@@ -12,6 +12,14 @@
 #include <string.h>
 #include "pq/dilithium_params.h"
 
+#if defined(MBEDTLS_PLATFORM_C)
+#include "mbedtls/platform.h"
+#else
+#include <stdlib.h>
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
+#endif
+
 int prepare_dilithium_key_formtat ( unsigned char *pk , unsigned char *sk , 
 	unsigned char *final_buf){
 
@@ -44,6 +52,8 @@ int prepare_dilithium_key_formtat ( unsigned char *pk , unsigned char *sk ,
 	final_buf_bytes_written = (size_t *) malloc(16);
 	mbedtls_base64_encoding(final_buf, final_buf_size + 1, 
 		final_buf_bytes_written, buf, len);
+
+	free(buf);	
 
 	//Reutrn num of bytes in buffer
 	return final_buf_bytes_written;
