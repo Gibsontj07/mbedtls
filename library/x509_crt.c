@@ -2123,7 +2123,6 @@ check_signature:
         signature_is_good = ret == 0;
         if( top && ! signature_is_good )
             continue;
-
         /* optional time check */
         if( mbedtls_x509_time_is_past( &parent->valid_to ) ||
             mbedtls_x509_time_is_future( &parent->valid_from ) )
@@ -2196,7 +2195,7 @@ static int x509_crt_find_parent(
         rs_ctx->parent_is_trusted = -1;
     }
 #endif
-    
+
     while( 1 ) {
         search_list = *parent_is_trusted ? trust_ca : child->next;
 
@@ -2614,11 +2613,11 @@ int mbedtls_x509_crt_verify_restartable( mbedtls_x509_crt *crt,
 
     if( x509_profile_check_key( profile, &crt->pk ) != 0 )
         ee_flags |= MBEDTLS_X509_BADCERT_BAD_KEY;
-
+ 
     /* Check the chain */
     ret = x509_crt_verify_chain( crt, trust_ca, ca_crl, profile,
                                  &ver_chain, rs_ctx );
-
+ 
     if( ret != 0 )
         goto exit;
 

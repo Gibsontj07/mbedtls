@@ -1141,9 +1141,9 @@
  /**
  * SABER ciphers
  */
-#define MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED
-#define MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED
-#define MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_SABER_ECDSA_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_SABER_SPHINCS_ENABLED
+//#define MBEDTLS_KEY_EXCHANGE_SABER_DILITHIUM_ENABLED
 /**
  * \def MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
  *
@@ -1428,7 +1428,7 @@
 * Enable DILITHIUM ciphersuites.
 *
 */
-#define MBEDTLS_SSL_DILITHIUM
+//#define MBEDTLS_SSL_DILITHIUM
 
 /**
 * \def MBEDTLS_SSL_HS_FRAGMENTATION
@@ -2476,7 +2476,7 @@
  *
  * Requires: TODO
  */
-#define MBEDTLS_SABER_C
+//#define MBEDTLS_SABER_C
 
 /**
  * \def MBEDTLS_ECJPAKE_C
@@ -3293,8 +3293,8 @@
 
 /* Platform options */
 //#define MBEDTLS_PLATFORM_STD_MEM_HDR   <stdlib.h> /**< Header to include if MBEDTLS_PLATFORM_NO_STD_FUNCTIONS is defined. Don't define if no header is needed. */
-//#define MBEDTLS_PLATFORM_STD_CALLOC        calloc /**< Default allocator to use, can be undefined */
-//#define MBEDTLS_PLATFORM_STD_FREE            free /**< Default free to use, can be undefined */
+#define MBEDTLS_PLATFORM_STD_CALLOC        calloc /**< Default allocator to use, can be undefined */
+#define MBEDTLS_PLATFORM_STD_FREE            free /**< Default free to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_EXIT            exit /**< Default exit to use, can be undefined */
 //#define MBEDTLS_PLATFORM_STD_TIME            time /**< Default time to use, can be undefined. MBEDTLS_HAVE_TIME must be enabled */
 //#define MBEDTLS_PLATFORM_STD_FPRINTF      fprintf /**< Default fprintf to use, can be undefined */

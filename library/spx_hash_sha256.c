@@ -3,6 +3,7 @@
 
 #include "pq/spx_utils.h"
 #include "pq/spx_hash.h"
+#include "pq/spx_thash.h"
 #include "pq/spx_hash_address.h"
 #include "mbedtls/sha256.h"
 

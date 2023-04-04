@@ -2,12 +2,16 @@
 #define SPX_HASH_ADDRESS_H
 
 #include <stdint.h>
+#include "pq/spx_params.h"
 
 #define SPX_ADDR_TYPE_WOTS 0
 #define SPX_ADDR_TYPE_WOTSPK 1
 #define SPX_ADDR_TYPE_HASHTREE 2
 #define SPX_ADDR_TYPE_FORSTREE 3
 #define SPX_ADDR_TYPE_FORSPK 4
+//Round 4 addition
+#define SPX_ADDR_TYPE_WOTSPRF 5
+#define SPX_ADDR_TYPE_FORSPRF 6
 
 void set_layer_addr(uint32_t addr[8], uint32_t layer);
 

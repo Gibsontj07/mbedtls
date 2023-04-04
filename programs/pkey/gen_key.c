@@ -401,6 +401,7 @@ int main( int argc, char *argv[] )
         mbedtls_printf( " failed\n  !  mbedtls_pk_setup returned -0x%04x", -ret );
         goto exit;
     }
+
 #if defined(MBEDTLS_RSA_C) && defined(MBEDTLS_GENPRIME)
     if( opt.type == MBEDTLS_PK_RSA )
     {
@@ -428,11 +429,14 @@ int main( int argc, char *argv[] )
     }
     else
 #endif /* MBEDTLS_ECP_C */
+
 #if defined(MBEDTLS_SPHINCS_C)
+    
 	if (opt.type == MBEDTLS_PK_SPHINCS)
 	{
 		ret = mbedtls_sphincs_genkey(opt.md_alg, mbedtls_pk_sphincs(key),
 									 mbedtls_ctr_drbg_random, &ctr_drbg);
+        
 		if (ret != 0)
 		{
 			mbedtls_printf(" failed\n  !  mbedtls_sphincs_genkey returned -0x%04x", -ret);
@@ -462,7 +466,7 @@ int main( int argc, char *argv[] )
      * 1.2 Print the key
      */
     mbedtls_printf( " ok\n  . Key information:\n" );
-    mbedtls_printf( " 476.\n");
+    mbedtls_printf( " line 466.\n");
 
 #if defined(MBEDTLS_RSA_C)
     if( mbedtls_pk_get_type( &key ) == MBEDTLS_PK_RSA )

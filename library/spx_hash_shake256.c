@@ -3,6 +3,7 @@
 
 #include "pq/spx_utils.h"
 #include "pq/spx_hash.h"
+#include "pq/spx_thash.h"
 #include "pq/fips202.h"
 
 static void addr_to_bytes(unsigned char *bytes, const uint32_t addr[8])

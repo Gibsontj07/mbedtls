@@ -4,6 +4,19 @@
 #include <stdint.h>
 #include "pq/spx_params.h"
 #include "pq/spx_hash.h"
+#include "pq/spx_thash.h"
+#include "pq/spx_context.h"
+
+/* To support MSVC use alloca() instead of VLAs. See #20. */
+#ifdef _MSC_VER
+/* MSVC defines _alloca in malloc.h */
+# include <malloc.h>
+/* Note: _malloca(), which is recommended over deprecated _alloca,
+   requires that you call _freea(). So we stick with _alloca */ 
+#define  SPX_VLA(__t,__x,__s) __t *__x = (__t*)mbedtls_calloc((__s)*sizeof(__t))
+#else
+#define SPX_VLA(__t,__x,__s) __t __x [__s]
+#endif
 
 /**
  * Converts the value of 'in' to 'outlen' bytes in big-endian byte order.
@@ -11,19 +24,27 @@
 void ull_to_bytes(unsigned char *out, unsigned int outlen,
                   unsigned long long in);
 
+
 /**
  * Converts the inlen bytes in 'in' from big-endian byte order to an integer.
  */
 unsigned long long bytes_to_ull(const unsigned char *in, unsigned int inlen);
 
+
+//Round 4 changes and additions
+/**
+ * Converts the value of 'in' to 'outlen' bytes in big-endian byte order.
+ */
+void u32_to_bytes(unsigned char *out, uint32_t in);
+
 /**
  * Computes a root node given a leaf and an auth path.
  * Expects address to be complete other than the tree_height and tree_index.
  */
-void compute_root(const sphincs_md_info_t *md, unsigned char *root, const unsigned char *leaf,
-                  unsigned long leafidx, uint32_t idx_offset,
+void compute_root(unsigned char *root, const unsigned char *leaf,
+                  uint32_t leaf_idx, uint32_t idx_offset,
                   const unsigned char *auth_path, uint32_t tree_height,
-                  const unsigned char *pub_seed, uint32_t addr[8]);
+                  const spx_ctx *ctx, uint32_t addr[8]);
 
 /**
  * For a given leaf index, computes the authentication path and the resulting
@@ -33,14 +54,12 @@ void compute_root(const sphincs_md_info_t *md, unsigned char *root, const unsign
  * Applies the offset idx_offset to indices before building addresses, so that
  * it is possible to continue counting indices across trees.
  */
-void treehash(const sphincs_md_info_t *md, unsigned char *root, unsigned char *auth_path,
-              const unsigned char *sk_seed, const unsigned char *pub_seed,
+void treehash(unsigned char *root, unsigned char *auth_path,
+              const spx_ctx* ctx,
               uint32_t leaf_idx, uint32_t idx_offset, uint32_t tree_height,
               void (*gen_leaf)(
-				 const sphincs_md_info_t *md,
                  unsigned char* /* leaf */,
-                 const unsigned char* /* sk_seed */,
-                 const unsigned char* /* pub_seed */,
+                 const spx_ctx* ctx /* ctx */,
                  uint32_t /* addr_idx */, const uint32_t[8] /* tree_addr */),
               uint32_t tree_addr[8]);
 

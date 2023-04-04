@@ -94,9 +94,22 @@ set(src_crypto
     spx_fors.c
     spx_hash_address.c
     spx_hash_sha256.c
-    spx_hash_shake256.c
+    #spx_hash_shake256.c
+    spx_hash_shake.c
+    #spx_hash_sha2.c
+    #spx_hash_haraka.c
     spx_utils.c
     spx_wots.c
+    spx_utilsx1.c
+    spx_wotsx1.c
+    spx_merkle.c
+    #spx_haraka.c
+    #spx_thash_haraka_robust.c
+    #spx_thash_haraka_simple.c
+    #spx_thash_sha2_robust.c
+    #spx_thash_sha2_simple.c
+    spx_thash_shake_robust.c
+    #spx_thash_shake_simple.c
     threading.c
     timing.c
     version.c

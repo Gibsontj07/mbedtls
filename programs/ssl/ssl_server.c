@@ -108,7 +108,7 @@ int main( void )
     "<h2>mbed TLS Test Server</h2>\r\n" \
     "<p>Successful connection using: %s</p>\r\n"
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 4
 
 
 static void my_debug( void *ctx, int level,
