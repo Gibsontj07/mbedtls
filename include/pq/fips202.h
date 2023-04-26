@@ -54,8 +54,8 @@ void shake256_inc_absorb(uint64_t *s_inc, const unsigned char *input, size_t inl
 void shake256_inc_finalize(uint64_t *s_inc);
 void shake256_inc_squeeze(unsigned char *output, size_t outlen, uint64_t *s_inc);
 
-void shake128(unsigned char *output, size_t outlen,
-              const unsigned char *input, size_t inlen);
+void shake128(unsigned char *output, unsigned long long outlen, 
+              const unsigned char *input, unsigned long long inlen);
 
 void shake256(unsigned char *output, size_t outlen,
               const unsigned char *input, size_t inlen);
